@@ -1,0 +1,15 @@
+{
+  "name": "Terraryum",
+  "short_name": "Terraryum",
+  "description": "Cam kavanozda kendi kendine yaşayan bir ekosistem kur.",
+  "lang": "tr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#12110e",
+  "theme_color": "#12110e",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
