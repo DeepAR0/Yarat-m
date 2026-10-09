@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Check, ChevronRight, Diamond, Hand, MousePointer2, MoreHorizontal, Lightbulb, Map, Settings as SettingsIcon, Shuffle, Star, Trophy, X } from 'lucide-react';
 import { CellData, GameMode, PRISM_DEFINITIONS, STAGES } from './types/game';
-import { areNeighbors, Coord, findSuggestedPath, previewClear, isValidPath } from './utils/boardEngine';
+import { areNeighbors, Coord, previewClear, isValidPath } from './utils/boardEngine';
 import { commitMove, createSession, defaultProfile, nextUnlocked, parseProfile, Profile, recordSession, Session, restartSession, sessionToOpen, shuffleSession, stageFor, starsFor } from './utils/session';
 import { haptic, listenToAppState, nativeStartup, readSave, shareScore, writeSave } from './utils/native';
 import { sound } from './utils/sound';
@@ -16,6 +16,7 @@ import { ResultDialog } from './components/ResultDialog';
 import { CollectionPage } from './pages/CollectionPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { format, modeLabel } from './utils/format';
+import { findBestHint } from './utils/hint';
 import { GemBurst, GemEffects } from './components/GemEffects';
 import { ChainEnergy } from './components/ChainEnergy';
 import { GemFalls, MoveTimeline, planGemFalls } from './utils/movePresentation';
@@ -33,6 +34,9 @@ import { adPrivacyRequired, prepareAdConsent, rewardedAdsAvailable, showAdPrivac
 type Page = 'journey' | 'collection' | 'settings' | 'league' | 'game';
 type Overlay = 'guide' | 'more' | 'restart' | 'erase' | 'privacy' | 'story' | null;
 type Presentation = { id: number; phase: 'clearing' | 'falling'; grid: CellData[][]; cleared: Set<string>; falls: GemFalls; step: { x: number; y: number } };
+/** The record a finished attempt competes against, read before the attempt is recorded. */
+const bestBefore = (profile: Profile, session: Session) => session.mode === 'classic' ? profile.stages[session.stageId]?.best ?? 0 :
+  session.mode === 'daily' && session.dailyKey ? profile.dailyBest[session.dailyKey] ?? 0 : null;
 const tabs = [{ id: 'journey', label: 'Macera', icon: Map }, { id: 'league', label: 'Lig', icon: Trophy }, { id: 'collection', label: 'Koleksiyon', icon: Diamond }, { id: 'settings', label: 'Ayarlar', icon: SettingsIcon }] as const;
 
 export default function App() {
@@ -46,6 +50,7 @@ export default function App() {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [storyToPlay,setStoryToPlay] = useState<StoryRecord|null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [previousBest, setPreviousBest] = useState<number | null>(null);
   const [path, setPath] = useState<Coord[]>([]);
   const [loop, setLoop] = useState(false);
   const [hint, setHint] = useState<Coord[]>([]);
@@ -185,6 +190,7 @@ export default function App() {
     const move = commitMove(current, pathRef.current, wasLoop);
     clearPath();
     if (!move) return;
+    if (move.next.outcome !== 'playing') setPreviousBest(bestBefore(profileRef.current, current));
     const learning = lessonRef.current;
     if (learning === 'link' || learning === 'loop' && wasLoop) finishLesson(learning);
     resolvingRef.current = true;
@@ -365,7 +371,7 @@ export default function App() {
             {milestone && <span key={milestone.id} className="chain-accent" style={{'--accent-color': milestone.color} as React.CSSProperties}/>}
             {activeColor && path.length > 1 && <ChainEnergy path={path} color={activeColor.dotColor} loop={loop} reducedMotion={reducedMotion}/>}
             <div className="board-grid">{displayGrid!.map((row, r) => row.map((cell, c) => {
-              const selected = path.some(([pr, pc]) => pr === r && pc === c), hinted = hint.some(([pr, pc]) => pr === r && pc === c);
+              const selected = path.some(([pr, pc]) => pr === r && pc === c), hintIndex = hint.findIndex(([pr, pc]) => pr === r && pc === c), hinted = hintIndex >= 0;
               const def = PRISM_DEFINITIONS[cell.color];
               const lessonIndex = lessonPath.findIndex(([lr,lc]) => lr === r && lc === c);
               const lessonNext = lessonIndex === (loop ? -1 : chainCount >= (lesson === 'loop' ? 4 : 3) ? 0 : chainCount);
@@ -373,7 +379,7 @@ export default function App() {
               const clearing = presentation?.phase === 'clearing' && presentation.cleared.has(`${r},${c}`);
               const loopHighlight = !selected && affected.has(`${r},${c}`);
               return <button key={`${r},${c}`} data-cell-coord={`${r},${c}`} className={`gem-cell ${selected || loopHighlight ? 'selected' : ''} ${hinted ? 'hinted' : ''} ${cell.locked ? 'frozen' : ''} ${lessonIndex >= 0 && lesson ? 'lesson-stone' : ''} ${lessonIndex >= 0 && lesson && lessonNext ? 'lesson-next' : ''}`} style={{ '--gem-color': def.hex, '--gem-light': def.secondaryHex } as React.CSSProperties}
-                aria-label={`${lesson && lessonIndex >= 0 ? `Alıştırma ${lessonIndex + 1}, ` : ''}${def.name}, ${def.symbol} simgesi, satır ${r + 1}, sütun ${c + 1}${cell.locked ? ', mühürlü' : ''}${cell.special !== 'none' ? cell.special === 'nova_3x3' ? ', rezonans çekirdeği' : ', ışık kanalı' : ''}${cell.multiplier > 1 ? `, ${cell.multiplier} kat puan` : ''}`} aria-pressed={selected} aria-disabled={cell.locked || gameLocked}
+                aria-label={`${lesson && lessonIndex >= 0 ? `Alıştırma ${lessonIndex + 1}, ` : hinted ? `İpucu ${hintIndex + 1}, ` : ''}${def.name}, ${def.symbol} simgesi, satır ${r + 1}, sütun ${c + 1}${cell.locked ? ', mühürlü' : ''}${cell.special !== 'none' ? cell.special === 'nova_3x3' ? ', rezonans çekirdeği' : ', ışık kanalı' : ''}${cell.multiplier > 1 ? `, ${cell.multiplier} kat puan` : ''}`} aria-pressed={selected} aria-disabled={cell.locked || gameLocked}
                 onPointerDown={event => {
                   if (tapMode || event.button !== 0 || gameLocked || cell.locked || resolvingRef.current || pointerRef.current !== null) return;
                   event.preventDefault(); event.currentTarget.focus({ preventScroll: true }); clearPath(); pointerRef.current = event.pointerId; extendPath(r, c);
@@ -381,6 +387,7 @@ export default function App() {
                 <div key={cell.id} className={`gem-motion ${fall ? 'falling' : ''} ${clearing ? 'clearing' : ''}`} onAnimationEnd={event => {
                   if (event.target === event.currentTarget && event.animationName === 'gem-fall' && presentation) timeline.landed(presentation.id, cell.id);
                 }} style={fall ? { '--drop-x': `${fall.x * presentation!.step.x}px`, '--drop-y': `${fall.y * presentation!.step.y}px`, '--fall-duration': `${fall.duration}ms`, '--fall-delay': `${fall.delay}ms`, '--fall-opacity': fall.fresh ? 0 : 1 } as React.CSSProperties : undefined}><PrismGemArtwork gemStyle={profile.gemStyle} cell={cell} isSelected={selected} isLoopHighlighted={loopHighlight} chargeTier={selected || loopHighlight ? energy.tier : 0} previewPower={chainCount >= 4 && r === path[loop ? path.length-2 : path.length-1]?.[0] && c === path[loop ? path.length-2 : path.length-1]?.[1] ? (loop || chainCount >= 6 ? 'nova' : 'channel') : undefined}/></div>
+                {!lesson && hinted && !selected && hint.length > 3 && <span className="lesson-step hint-step" aria-hidden="true">{hintIndex + 1}{hintIndex === 0 && hint.length > 1 && hint[0][0] === hint.at(-1)![0] && hint[0][1] === hint.at(-1)![1] ? '↺' : ''}</span>}
                 {lesson && lessonIndex >= 0 && <span className="lesson-step" aria-hidden="true">{lessonIndex + 1}{lesson === 'loop' && lessonIndex === 0 ? '↺' : ''}</span>}
                 {selected && <span className="chain-number">{path.findIndex(([pr, pc]) => pr === r && pc === c) + 1}</span>}
               </button>;
@@ -389,7 +396,7 @@ export default function App() {
           </div></div>
           <div className="game-status-row"><div className="game-feedback" role="status" aria-live="polite">{presentation ? presentation.phase === 'clearing' ? 'Enerji yayılıyor…' : 'Çekirdekler yerleşiyor…' : path.length ? loop ? `${affected.size} taş dalgaya katılıyor · halka 2× puan` : chainCount < 3 ? `${chainCount} taş seçildi · en az 3 bağla` : `${affected.size} taş temizlenecek${currentPower ? ` · ${currentPower} oluşacak` : ''}` : feedback}</div>
           <button className="link-commit" disabled={gameLocked || chainCount < 3} onClick={commit}><Check size={16}/>Patlat</button></div>
-          <div className="game-tools"><button className="input-mode-button" disabled={gameLocked} aria-pressed={tapMode} aria-label={tapMode ? 'Dokunarak bağla; sürükleme moduna geç' : 'Sürükleyerek bağla; dokunma moduna geç'} onClick={() => { clearPath(); setTapMode(!tapMode); }}>{tapMode ? <Hand size={20}/> : <MousePointer2 size={20}/>}<span>{tapMode ? 'Dokun' : 'Sürükle'}</span></button><button disabled={gameLocked} onClick={() => { clearPath(); setHint(findSuggestedPath(session.grid) ?? []); setFeedback('Parlayan üç çekirdeği bağla.'); }}><Lightbulb size={21}/><span>İpucu</span></button><button disabled={gameLocked || session.shufflesLeft === 0} onClick={() => { if (resolvingRef.current) return; clearPath(); updateSession(shuffleSession(session)); setHint([]); setFeedback('Çekirdekler yeniden dizildi.'); }}><Shuffle size={21}/><span>Karıştır <b>{session.shufflesLeft}</b></span></button><button className="more-tool" onClick={() => { clearPath(); setOverlay('more'); }} aria-haspopup="dialog"><MoreHorizontal size={21}/><span>Diğer</span></button></div>
+          <div className="game-tools"><button className="input-mode-button" disabled={gameLocked} aria-pressed={tapMode} aria-label={tapMode ? 'Dokunarak bağla; sürükleme moduna geç' : 'Sürükleyerek bağla; dokunma moduna geç'} onClick={() => { clearPath(); setTapMode(!tapMode); }}>{tapMode ? <Hand size={20}/> : <MousePointer2 size={20}/>}<span>{tapMode ? 'Dokun' : 'Sürükle'}</span></button><button disabled={gameLocked} onClick={() => { clearPath(); const best = findBestHint(session); setHint(best?.path ?? []); setFeedback(best?.message ?? 'Bu tahtada bağlantı yok. Karıştırmayı dene.'); }}><Lightbulb size={21}/><span>İpucu</span></button><button disabled={gameLocked || session.shufflesLeft === 0} onClick={() => { if (resolvingRef.current) return; clearPath(); updateSession(shuffleSession(session)); setHint([]); setFeedback('Çekirdekler yeniden dizildi.'); }}><Shuffle size={21}/><span>Karıştır <b>{session.shufflesLeft}</b></span></button><button className="more-tool" onClick={() => { clearPath(); setOverlay('more'); }} aria-haspopup="dialog"><MoreHorizontal size={21}/><span>Diğer</span></button></div>
           {session.mode === 'daily' && session.dailyKey !== leagueDay() && <p className="quiet-note">Önceki günün bulmacasını oynuyorsun. Ana ekrandan bugünün bulmacasını açabilirsin.</p>}
         </section>
       </div>}
@@ -406,7 +413,7 @@ export default function App() {
     {overlay === 'erase' && <EraseDialog onClose={() => setOverlay(null)} onConfirm={() => { clearPath(); setProfile(recordSession(defaultProfile(), createSession('classic'))); setOverlay(null); setToast('Bu cihazdaki oyun ilerlemesi sıfırlandı.'); }}/>}
     {overlay === 'privacy' && <PrivacyDialog onClose={() => setOverlay(null)}/>}
     {page === 'game' && session.outcome !== 'playing' && overlay === null && !presentation && !burst && <ResultDialog profile={profile} session={session} mystery={mystery} discoveryScene={discoveryScene} reducedMotion={reducedMotion}
-      adBusy={adBusy} adNotice={adNotice} canSave={!saveError} onNavigate={goPage} onWatchAd={() => { void continueWithAd(); }}
+      previousBest={previousBest} adBusy={adBusy} adNotice={adNotice} canSave={!saveError} onNavigate={goPage} onWatchAd={() => { void continueWithAd(); }}
       onNextStage={() => openGame('classic', session.stageId + 1)} onRestart={restart} onShare={() => { void share(); }}/>}
   </div>;
 }
