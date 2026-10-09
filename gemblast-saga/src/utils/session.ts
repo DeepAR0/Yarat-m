@@ -1,6 +1,7 @@
 import { CellData, FlowDirection, FLOW_DIRECTIONS, GameMode, localDateKey, getDailyStageConfig, PRISM_COLORS, PrismColor, StageConfig, STAGES, LEGACY_STAGES } from '../types/game';
 import { Coord, createGrid, createRNG, ensurePlayable, flowForPath, isValidPath, resolvePathOnGrid, shuffleGrid } from './boardEngine';
 import { type CompetitionTrace, validTrace, leagueDay } from './competition';
+import { emptyMeta, parseMeta, type MetaState } from './meta';
 
 export interface Session {
   mode: GameMode;
@@ -38,10 +39,11 @@ export interface Profile {
   loopTutorialSeen?: boolean;
   mysteryDays?: string[];
   gemStyle?: 'motif' | 'element';
+  meta?: MetaState;
 }
 export const emptyCounts = () => Object.fromEntries(PRISM_COLORS.map(c => [c, 0])) as Record<PrismColor, number>;
 export const defaultProfile = (): Profile => ({ version: 1, ruleset: 2, settings: { sound: true, haptics: true, reducedMotion: false },
-  stages: {}, dailyWins: [], mysteryDays: [], dailyBest: {}, zenBest: 0, sessions: {}, lastMode: 'classic', tutorialSeen: false });
+  stages: {}, dailyWins: [], mysteryDays: [], dailyBest: {}, zenBest: 0, sessions: {}, lastMode: 'classic', tutorialSeen: false, meta: emptyMeta() });
 
 export function stageFor(session: Session): StageConfig {
   return session.mode === 'daily' ? getDailyStageConfig(new Date(`${session.dailyKey}T12:00:00`)) :
@@ -205,6 +207,7 @@ export function parseProfile(text: string | null): Profile {
     if (raw.gemStyle === 'element' && Array.from({length:6}, (_, i) => profile.stages[i+1]?.stars).every(Boolean)) profile.gemStyle = 'element';
     if (isRecord(raw.dailyBest)) for (const [key, value] of Object.entries(raw.dailyBest)) if (dateKey(key) && count(value)) profile.dailyBest[key] = value;
     if (count(raw.zenBest)) profile.zenBest = raw.zenBest;
+    profile.meta = parseMeta(raw.meta);
     if (raw.ruleset === 2 && typeof raw.tutorialSeen === 'boolean') profile.tutorialSeen = raw.tutorialSeen;
     if (raw.ruleset === 2 && typeof raw.loopTutorialSeen === 'boolean') profile.loopTutorialSeen = raw.loopTutorialSeen;
     if (raw.ruleset === 2 && isRecord(raw.sessions)) for (const mode of ['classic', 'daily', 'zen'] as const) if (validateSession(raw.sessions[mode], mode)) {
