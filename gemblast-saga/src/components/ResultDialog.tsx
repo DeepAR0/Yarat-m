@@ -1,17 +1,18 @@
-import { ArrowRight, Award, Diamond, Share2, Sparkles, Trophy, Zap } from 'lucide-react';
+import { ArrowRight, Award, Diamond, Flame, Gift, Share2, Sparkles, Trophy, Zap } from 'lucide-react';
 import { STAGES } from '../types/game';
 import { canRewardContinue, starsFor, type Profile, type Session } from '../utils/session';
 import { ECHOES, type mysteryProgress } from '../utils/mystery';
 import type { StoryRecord } from '../utils/storyPresentation';
+import { CHESTS, type FinishSummary } from '../utils/meta';
 import { rewardedAdsAvailable } from '../utils/ads';
 import { format } from '../utils/format';
 import { Dialog } from './Dialog';
 import { StarRating } from './StarRating';
 import { StoryPlayer } from './StoryPlayer';
 
-export function ResultDialog({ profile, session, mystery, discoveryScene, reducedMotion, previousBest = null, adBusy, adNotice, canSave, onNavigate, onWatchAd, onNextStage, onRestart, onShare }: {
-  profile: Profile; session: Session; mystery: ReturnType<typeof mysteryProgress>; discoveryScene: StoryRecord | undefined; reducedMotion: boolean; previousBest?: number | null;
-  adBusy: boolean; adNotice: string; canSave: boolean; onNavigate: (page: 'journey' | 'collection' | 'league') => void;
+export function ResultDialog({ reward = null, profile, session, mystery, discoveryScene, reducedMotion, previousBest = null, adBusy, adNotice, canSave, onNavigate, onWatchAd, onNextStage, onRestart, onShare }: {
+  reward?: FinishSummary | null; profile: Profile; session: Session; mystery: ReturnType<typeof mysteryProgress>; discoveryScene: StoryRecord | undefined; reducedMotion: boolean; previousBest?: number | null;
+  adBusy: boolean; adNotice: string; canSave: boolean; onNavigate: (page: 'journey' | 'collection' | 'league' | 'rewards') => void;
   onWatchAd: () => void; onNextStage: () => void; onRestart: () => void; onShare: () => void;
 }) {
   // Classic bests only count wins; a first clear is its own celebration, not a "record".
@@ -24,6 +25,11 @@ export function ResultDialog({ profile, session, mystery, discoveryScene, reduce
     {session.outcome === 'won' && session.mode === 'classic' && <div className="result-discovery"><strong>{mystery.unlocked.at(-1)?.title ?? 'İlk ışık'}</strong><p>{mystery.unlocked.at(-1)?.stage === session.stageId ? mystery.unlocked.at(-1)?.text : mystery.next ? `Yolun bir parçası onarıldı. Bölüm ${mystery.next.stage} sonunda yeni bir kayıt açılacak.` : 'Kulenin yolu açıldı. Son Uyanış için yedi yankıyı tamamla.'}</p><button className="text-button" onClick={() => onNavigate('collection')}>{mystery.finale ? 'Son Uyanış’ı oku' : 'Günlüğü aç'}<Sparkles size={16}/></button></div>}
     {session.outcome === 'won' && session.mode === 'daily' && <div className="result-discovery"><strong>{(profile.mysteryDays ?? profile.dailyWins).includes(session.dailyKey!) ? `Yankı ${Math.min(7, (profile.mysteryDays ?? profile.dailyWins).indexOf(session.dailyKey!) + 1)} · Günlüğüne kaydedildi` : 'Günlük bulmaca tamamlandı'}</strong><p>{(profile.mysteryDays ?? profile.dailyWins).includes(session.dailyKey!) ? ECHOES[(profile.mysteryDays ?? profile.dailyWins).indexOf(session.dailyKey!)]?.text : mystery.echoes === 7 ? 'Yedi yankı tamam. Günlük skorunu ligde geliştirebilirsin.' : 'Yeni yankı için bugünün bulmacasını kazan.'}</p><button className="text-button" onClick={() => onNavigate('collection')}>{mystery.finale ? 'Son Uyanış’ı oku' : 'Yankıları oku'}<Sparkles size={16}/></button></div>}
     <div className="result-score"><strong>{format(session.score)}</strong><span>PUAN</span></div>
+    {reward && (reward.shards > 0 || reward.chests.length > 0 || reward.winStreak > 1) && <div className="result-rewards" aria-label="Kazandıkların">
+      {reward.shards > 0 && <span className="reward-shards"><b>+{reward.shards}</b> ✦ kristal{reward.firstClear ? ' · ilk zafer' : ''}</span>}
+      {session.outcome === 'won' && session.mode === 'classic' && reward.winStreak > 1 && <span className="reward-streak"><Flame size={16}/>Alev serisi {reward.winStreak}</span>}
+      {reward.chests.map((chest, i) => <button key={i} className="reward-chest" onClick={() => onNavigate('rewards')}><Gift size={16}/>{CHESTS[chest].name} kazandın!</button>)}
+    </div>}
     {newRecord && <p className="result-record" role="status"><Award size={16}/>Yeni rekor! <span>Önceki en iyi: {format(previousBest!)}</span></p>}
     {rewardedAdsAvailable() && canRewardContinue(session) && <div className="reward-offer"><button className="primary-button full" disabled={adBusy || !canSave} onClick={onWatchAd}><Zap size={18}/>{adBusy ? 'Reklam hazırlanıyor…' : 'Reklam izle · +5 hamle'}</button><small>Bölüm başına bir kez. Reklamı tamamla, aynı tahtadan devam et. Bu denemede en fazla 1 yıldız kazanılır.</small></div>}
     {adNotice && <p role="status" className="league-notice">{adNotice}</p>}

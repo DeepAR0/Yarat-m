@@ -8,6 +8,7 @@ import './mystery.css';
 import './iconic.css';
 import './world-theme.css';
 import './journey-map.css';
+import './rewards.css';
 import { RecoveryBoundary } from './components/RecoveryBoundary';
 import { nativeStartup } from './utils/native';
 

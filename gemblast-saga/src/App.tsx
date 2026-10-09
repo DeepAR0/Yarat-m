@@ -1,6 +1,6 @@
 /** @license SPDX-License-Identifier: Apache-2.0 */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Check, ChevronRight, Diamond, Hand, MousePointer2, MoreHorizontal, Lightbulb, Map, Settings as SettingsIcon, Shuffle, Star, Trophy, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronRight, Diamond, Gift, Hand, MousePointer2, MoreHorizontal, Lightbulb, Map, Settings as SettingsIcon, Shuffle, Star, Trophy, X } from 'lucide-react';
 import { CellData, GameMode, PRISM_DEFINITIONS, STAGES } from './types/game';
 import { areNeighbors, Coord, previewClear, isValidPath } from './utils/boardEngine';
 import { commitMove, createSession, defaultProfile, nextUnlocked, parseProfile, Profile, recordSession, Session, restartSession, sessionToOpen, shuffleSession, stageFor, starsFor } from './utils/session';
@@ -17,6 +17,11 @@ import { CollectionPage } from './pages/CollectionPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { format, modeLabel } from './utils/format';
 import { findBestHint } from './utils/hint';
+import { BOOSTERS, buyBooster, metaOf, pendingRewards, settleFinish, spendBooster, trackMove, type BoosterKind, type ChestKind, type FinishSummary, type Loot, claimLogin, claimMission, claimAchievement, openChest, describeLoot } from './utils/meta';
+import { ChestDialog } from './components/ChestDialog';
+import { localDateKey } from './types/game';
+import { BoosterBar } from './components/BoosterBar';
+import { RewardsPage } from './pages/RewardsPage';
 import { GemBurst, GemEffects } from './components/GemEffects';
 import { ChainEnergy } from './components/ChainEnergy';
 import { GemFalls, MoveTimeline, planGemFalls } from './utils/movePresentation';
@@ -28,16 +33,16 @@ import { findLessonPath, Lesson } from './utils/lesson';
 import { LessonCoach, LessonRoute } from './components/LessonCoach';
 import { League } from './components/League';
 import { leagueDay } from './utils/competition';
-import { canRewardContinue, applyRewardContinue } from './utils/session';
+import { canRewardContinue, applyRewardContinue, applyBooster, applyStreakBonus, canUseBooster } from './utils/session';
 import { adPrivacyRequired, prepareAdConsent, rewardedAdsAvailable, showAdPrivacy, watchContinueAd } from './utils/ads';
 
-type Page = 'journey' | 'collection' | 'settings' | 'league' | 'game';
-type Overlay = 'guide' | 'more' | 'restart' | 'erase' | 'privacy' | 'story' | null;
+type Page = 'journey' | 'rewards' | 'collection' | 'settings' | 'league' | 'game';
+type Overlay = 'guide' | 'more' | 'restart' | 'erase' | 'privacy' | 'story' | 'chest' | null;
 type Presentation = { id: number; phase: 'clearing' | 'falling'; grid: CellData[][]; cleared: Set<string>; falls: GemFalls; step: { x: number; y: number } };
 /** The record a finished attempt competes against, read before the attempt is recorded. */
 const bestBefore = (profile: Profile, session: Session) => session.mode === 'classic' ? profile.stages[session.stageId]?.best ?? 0 :
   session.mode === 'daily' && session.dailyKey ? profile.dailyBest[session.dailyKey] ?? 0 : null;
-const tabs = [{ id: 'journey', label: 'Macera', icon: Map }, { id: 'league', label: 'Lig', icon: Trophy }, { id: 'collection', label: 'Koleksiyon', icon: Diamond }, { id: 'settings', label: 'Ayarlar', icon: SettingsIcon }] as const;
+const tabs = [{ id: 'journey', label: 'Macera', icon: Map }, { id: 'rewards', label: 'Ödüller', icon: Gift }, { id: 'league', label: 'Lig', icon: Trophy }, { id: 'collection', label: 'Koleksiyon', icon: Diamond }, { id: 'settings', label: 'Ayarlar', icon: SettingsIcon }] as const;
 
 export default function App() {
   const [profile, setProfile] = useState<Profile>(defaultProfile);
@@ -51,6 +56,9 @@ export default function App() {
   const [storyToPlay,setStoryToPlay] = useState<StoryRecord|null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [previousBest, setPreviousBest] = useState<number | null>(null);
+  const [reward, setReward] = useState<FinishSummary | null>(null);
+  const [aiming, setAiming] = useState<BoosterKind | null>(null);
+  const [chestLoot, setChestLoot] = useState<{ kind: ChestKind; loot: Loot } | null>(null);
   const [path, setPath] = useState<Coord[]>([]);
   const [loop, setLoop] = useState(false);
   const [hint, setHint] = useState<Coord[]>([]);
@@ -89,6 +97,11 @@ export default function App() {
     setLesson(null);
     setProfile(p => ({ ...p, ...(kind === 'link' ? {tutorialSeen: true} : {loopTutorialSeen: true}) }));
   }, []);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3600);
+    return () => clearTimeout(timer);
+  }, [toast]);
   useEffect(() => {
     if (!milestone) return;
     const timer = setTimeout(() => setMilestone(null), 850);
@@ -181,6 +194,41 @@ export default function App() {
     finally { setAdBusy(false); setPrivacyOptions(await adPrivacyRequired()); }
   }
 
+  /** Records a new session state; settles rewards, missions and streaks the moment an attempt ends. */
+  const advance = useCallback((current: Session, next: Session, track?: (profile: Profile) => Profile) => {
+    const before = profileRef.current;
+    let after = recordSession(before, next);
+    if (track) after = track(after);
+    if (current.outcome === 'playing' && next.outcome !== 'playing') {
+      setPreviousBest(bestBefore(before, current));
+      const settled = settleFinish(before, after, next);
+      after = settled.profile; setReward(settled.summary);
+    }
+    sessionRef.current = next; profileRef.current = after;
+    setProfile(after);
+  }, []);
+
+  /** Clearing burst, then falling stones, with the board locked until the stones land. */
+  const animate = useCallback((current: Session, next: Session, cleared: Coord[], anchor: Coord, burst: Omit<GemBurst, 'id' | 'gems'>, slow: boolean) => {
+    resolvingRef.current = true;
+    const drops = planGemFalls(current.grid, next.grid, anchor);
+    const firstRect = boardRef.current?.querySelector('[data-cell-coord="0,0"]')?.getBoundingClientRect();
+    const columnRect = boardRef.current?.querySelector('[data-cell-coord="0,1"]')?.getBoundingClientRect();
+    const rowRect = boardRef.current?.querySelector('[data-cell-coord="1,0"]')?.getBoundingClientRect();
+    const step = { x: firstRect && columnRect ? columnRect.left - firstRect.left : 50, y: firstRect && rowRect ? rowRect.top - firstRect.top : 50 };
+    const id = ++effectId.current;
+    const nextBurst: GemBurst = { ...burst, id, gems: cleared.map(coord => ({ coord, cell: current.grid[coord[0]][coord[1]] })) };
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+    const base = { id, cleared: new Set(cleared.map(([r,c]) => `${r},${c}`)), falls: drops, step };
+    timeline.start(id, drops, slow ? 180 : 140, profileRef.current.settings.reducedMotion || systemReducedMotion, {
+      clearing: () => { setPresentation({ ...base, phase: 'clearing', grid: current.grid }); setBurst(nextBurst); },
+      falling: () => setPresentation({ ...base, phase: 'falling', grid: next.grid }),
+      settled: () => { resolvingRef.current = false; setPresentation(null); setBurst(null); },
+    });
+    if (next.outcome === 'won') { sound.playVictory(); void haptic('win', profileRef.current.settings.haptics); }
+    else if (next.outcome === 'lost') sound.playGameOver();
+  }, [timeline, systemReducedMotion]);
+
   const commit = useCallback(() => {
     const current = sessionRef.current;
     if (!current || resolvingRef.current) return;
@@ -190,38 +238,42 @@ export default function App() {
     const move = commitMove(current, pathRef.current, wasLoop);
     clearPath();
     if (!move) return;
-    if (move.next.outcome !== 'playing') setPreviousBest(bestBefore(profileRef.current, current));
     const learning = lessonRef.current;
     if (learning === 'link' || learning === 'loop' && wasLoop) finishLesson(learning);
-    resolvingRef.current = true;
-    sessionRef.current = move.next;
-    setProfile(previous => recordSession(previous, move.next));
-    setHint([]);
     const uniqueLength = chainSize - Number(wasLoop);
-    const committedPath = move.result.clearedCoords;
-    const drops = planGemFalls(current.grid, move.next.grid, lastCoord);
-    const firstRect = boardRef.current?.querySelector('[data-cell-coord="0,0"]')?.getBoundingClientRect();
-    const columnRect = boardRef.current?.querySelector('[data-cell-coord="0,1"]')?.getBoundingClientRect();
-    const rowRect = boardRef.current?.querySelector('[data-cell-coord="1,0"]')?.getBoundingClientRect();
-    const step = { x: firstRect && columnRect ? columnRect.left - firstRect.left : 50, y: firstRect && rowRect ? rowRect.top - firstRect.top : 50 };
-    const id = ++effectId.current;
+    advance(current, move.next, profile => trackMove(profile, move.result, uniqueLength, wasLoop));
+    setHint([]);
     const color = PRISM_DEFINITIONS[current.grid[firstCoord[0]][firstCoord[1]].color].secondaryHex;
-    const nextBurst: GemBurst = { id, points: move.earned, loop: wasLoop, chainLength: uniqueLength, path: drawnPath, color,
-      label: wasLoop ? 'RENK DALGASI!' : move.result.triggeredSpecialsCount > 1 ? 'ZİNCİR TEPKİSİ!' : uniqueLength >= 9 ? 'TAM GÜÇ!' : move.result.triggeredSpecialsCount ? 'ENERJİ DALGASI!' : uniqueLength >= 6 ? 'NOVA UYANDI!' : uniqueLength >= 4 ? 'GÜÇLÜ AKIŞ!' : 'ENERJİ TOPLANDI',
-      gems: move.result.clearedCoords.map(coord => ({ coord, cell: current.grid[coord[0]][coord[1]] })) };
-    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
-    const base = { id, cleared: new Set(committedPath.map(([r,c]) => `${r},${c}`)), falls: drops, step };
-    timeline.start(id, drops, wasLoop || move.result.triggeredSpecialsCount ? 180 : 140, profileRef.current.settings.reducedMotion || systemReducedMotion, {
-      clearing: () => { setPresentation({ ...base, phase: 'clearing', grid: current.grid }); setBurst(nextBurst); },
-      falling: () => setPresentation({ ...base, phase: 'falling', grid: move.next.grid }),
-      settled: () => { resolvingRef.current = false; setPresentation(null); setBurst(null); },
-    });
+    animate(current, move.next, move.result.clearedCoords, lastCoord, { points: move.earned, loop: wasLoop, chainLength: uniqueLength, path: drawnPath, color,
+      label: wasLoop ? 'RENK DALGASI!' : move.result.triggeredSpecialsCount > 1 ? 'ZİNCİR TEPKİSİ!' : uniqueLength >= 9 ? 'TAM GÜÇ!' : move.result.triggeredSpecialsCount ? 'ENERJİ DALGASI!' : uniqueLength >= 6 ? 'NOVA UYANDI!' : uniqueLength >= 4 ? 'GÜÇLÜ AKIŞ!' : 'ENERJİ TOPLANDI' },
+      wasLoop || move.result.triggeredSpecialsCount > 0);
     const special = move.result.spawnedPower;
     setFeedback(move.next.outcome === 'won' ? 'Harika! Tüm hedefler tamamlandı.' : special === 'nova_3x3' ? '3× rezonans çekirdeği oluştu. Yeni bir zincire ekle!' : special !== 'none' ? 'Işık kanalı oluştu. Bir sonraki zincire ekle!' : `+${format(move.earned)} puan · ${move.result.clearedCount} taş temizlendi${move.result.unlockedCount ? ` · ${move.result.unlockedCount} mühür açıldı` : ''}`);
-    if (move.next.outcome === 'won') { sound.playVictory(); void haptic('win', profileRef.current.settings.haptics); }
-    else if (move.next.outcome === 'lost') sound.playGameOver();
-    else { sound.playChainRelease(uniqueLength, wasLoop); void haptic('match', profileRef.current.settings.haptics); }
-  }, [clearPath, timeline, systemReducedMotion, finishLesson]);
+    if (move.next.outcome === 'playing') { sound.playChainRelease(uniqueLength, wasLoop); void haptic('match', profileRef.current.settings.haptics); }
+  }, [clearPath, finishLesson, advance, animate]);
+
+  /** Spends (or buys, then spends) a booster. Hammer and prism wait for a target stone. */
+  const fireBooster = useCallback((kind: BoosterKind, target?: Coord) => {
+    const current = sessionRef.current;
+    if (!current || resolvingRef.current || !canUseBooster(current, kind)) return;
+    if (kind !== 'moves' && !target) { clearPath(); setAiming(aim => aim === kind ? null : kind); return; }
+    setAiming(null);
+    const wallet = profileRef.current;
+    const funded = metaOf(wallet).boosters[kind] > 0 ? wallet : buyBooster(wallet, kind);
+    if (!funded) { setToast(`${BOOSTERS[kind].name} için ${BOOSTERS[kind].price} kristal gerekiyor. Görevler ve sandıklarla kristal kazan.`); return; }
+    const spent = spendBooster(funded, kind)!;
+    const used = applyBooster(current, kind, target);
+    if (!used) return;
+    profileRef.current = spent;
+    advance(current, used.next);
+    sound.playBoosterBlast(); void haptic('match', profileRef.current.settings.haptics);
+    if (!used.result) { setFeedback('+3 hamle eklendi. Hedeflerine odaklan!'); return; }
+    const color = PRISM_DEFINITIONS[current.grid[target![0]][target![1]].color].secondaryHex;
+    animate(current, used.next, used.result.clearedCoords, target!, { points: used.earned, loop: kind === 'prism', chainLength: used.result.clearedCount, path: [target!], color,
+      label: kind === 'prism' ? 'PRİZMA!' : 'ÇEKİÇ!' }, kind === 'prism');
+    setHint([]);
+    setFeedback(`${BOOSTERS[kind].name}: ${used.result.clearedCount} taş temizlendi · +${format(used.earned)} puan`);
+  }, [advance, animate, clearPath]);
 
   const extendPath = useCallback((r: number, c: number) => {
     const current = sessionRef.current, active = pathRef.current;
@@ -272,19 +324,25 @@ export default function App() {
     setAdNotice('');
     timeline.cancel(); setPresentation(null); resolvingRef.current = false;
     clearPath(); setHint([]); setBurst(null); setFeedback('Aynı renkte 3 taşı bağla. Halkayla tüm rengi temizle.');
-    const next = sessionToOpen(profile, mode, stageId, mode === 'daily' ? new Date(`${day ?? leagueDay()}T12:00:00`) : new Date());
+    const opened = sessionToOpen(profile, mode, stageId, mode === 'daily' ? new Date(`${day ?? leagueDay()}T12:00:00`) : new Date());
+    const next = applyStreakBonus(opened, metaOf(profile).winStreak);
+    if (next.streakBonus && next !== opened) setToast(`Alev serisi ${metaOf(profile).winStreak}: tahtada hazır güç taşları seni bekliyor!`);
+    setReward(null); setAiming(null);
     updateSession(next); setPage('game');
     setOverlay(null);
     setLesson(!profile.tutorialSeen ? 'link' : mode === 'classic' && next.stageId === 4 && !profile.loopTutorialSeen && next.loopsMade === 0 ? 'loop' : null);
   }
 
-  function goPage(target: Page) { timeline.finish(); clearPath(); setOverlay(null); setLesson(null); setPage(target); }
+  function goPage(target: Page) { timeline.finish(); clearPath(); setAiming(null); setOverlay(null); setLesson(null); setPage(target); }
   function restart() {
     setAdNotice('');
     if (!session) return;
     timeline.cancel(); setPresentation(null);
-    clearPath(); resolvingRef.current = false; setBurst(null); setHint([]);
-    updateSession(restartSession(session));
+    clearPath(); resolvingRef.current = false; setBurst(null); setHint([]); setAiming(null); setReward(null);
+    const quitting = session.mode === 'classic' && session.outcome === 'playing' && session.turns > 0;
+    const base = quitting ? { ...profile, meta: { ...metaOf(profile), winStreak: 0 } } : profile;
+    const next = applyStreakBonus(restartSession(session), metaOf(base).winStreak);
+    sessionRef.current = next; setProfile(recordSession(base, next));
     setOverlay(null); setFeedback(session.mode === 'daily' ? 'Aynı günlük bulmaca. Yeni bir yol dene!' : 'Yeni taş dizilimi. Çekirdekleri bağla!');
   }
   async function share() {
@@ -310,6 +368,8 @@ export default function App() {
   const totalStars = Object.values(profile.stages).reduce((sum, entry) => sum + entry.stars, 0);
   const mystery = mysteryProgress(profile);
   const today = leagueDay();
+  const localToday = localDateKey();
+  const pending = pendingRewards(profile, localToday);
   const dailyFound = (profile.mysteryDays ?? profile.dailyWins).includes(today);
   const discoveryScene = session ? resultRecord(profile,session) : undefined;
   const currentStage = session ? stageFor(session) : STAGES[0];
@@ -331,11 +391,18 @@ export default function App() {
     <a className="skip-link" href="#main">İçeriğe geç</a>
     <header className="app-header">
       <button className="brand" data-home onClick={() => goPage('journey')} aria-label="Gemblast Saga, ana ekran"><span className="brand-mark"><img src={PRISM_DEFINITIONS.coral.artwork} width="44" height="44" alt=""/></span><span>GEMBLAST<small>S A G A</small></span></button>
-      <nav className="desktop-nav" aria-label="Ana gezinme">{tabs.map(tab => <button key={tab.id} onClick={() => goPage(tab.id)} aria-current={page === tab.id ? 'page' : undefined}>{tab.label}</button>)}</nav>
-      <div className="header-actions"><span className="star-total"><Star size={16} fill="currentColor"/>{totalStars}</span><button className="icon-button" aria-label="Nasıl oynanır" onClick={() => setOverlay('guide')}><Lightbulb size={20}/></button></div>
+      <nav className="desktop-nav" aria-label="Ana gezinme">{tabs.map(tab => <button key={tab.id} onClick={() => goPage(tab.id)} aria-current={page === tab.id ? 'page' : undefined}>{tab.label}{tab.id === 'rewards' && pending > 0 && <span className="nav-badge" aria-label={`${pending} ödül bekliyor`}>{pending}</span>}</button>)}</nav>
+      <div className="header-actions"><button className="shard-total" aria-label={`${metaOf(profile).shards} kristal, ödüller`} onClick={() => goPage('rewards')}><span aria-hidden="true">✦</span>{format(metaOf(profile).shards)}</button><span className="star-total"><Star size={16} fill="currentColor"/>{totalStars}</span><button className="icon-button" aria-label="Nasıl oynanır" onClick={() => setOverlay('guide')}><Lightbulb size={20}/></button></div>
     </header>
     {saveError && <div className="save-error" role="alert"><span>{saveError}</span><button onClick={() => { void retryStorage(); }}>Yeniden dene</button></div>}
     <main id="main" ref={mainRef} tabIndex={-1} className={`main page-${page}`}>
+      {page === 'rewards' && <RewardsPage profile={profile} today={localToday}
+        onCheckIn={() => { const result = claimLogin(profile, localToday); if (!result) return; setProfile(result.profile); sound.playVictory(); setToast(result.reward.chest ? 'Haftalık hazine sandıklarına eklendi!' : `Günlük ödül: ${result.reward.label}`); }}
+        onMission={id => { setProfile(p => claimMission(p, id, localToday)); sound.playSpecialCreation(); }}
+        onOpenChest={() => { const result = openChest(profile); if (!result) return; setProfile(result.profile); setChestLoot({ kind: result.kind, loot: result.loot }); setOverlay('chest'); sound.playVictory(); void haptic('win', profile.settings.haptics); }}
+        onBuy={kind => { const bought = buyBooster(profile, kind); if (bought) { setProfile(bought); sound.playSpecialCreation(); setToast(`${BOOSTERS[kind].name} envanterine eklendi.`); } }}
+        onAchievement={id => { setProfile(p => claimAchievement(p, id)); sound.playVictory(); }}/>}
+      {page === 'journey' && pending > 0 && <button className="reward-banner" onClick={() => goPage('rewards')}><Gift size={22}/><span><strong>{pending} ödül seni bekliyor</strong><small>Günlük giriş, görevler ve sandıklar</small></span><ArrowRight size={18}/></button>}
       {page === 'league' && <League best={profile.dailyBest} daily={profile.sessions.daily} onPlay={day => openGame('daily', undefined, day)}/> }
       {page === 'journey' && <JourneyMap profile={profile} reducedMotion={reducedMotion} dailyFound={dailyFound} onPlay={id => openGame('classic', id)} onDaily={() => openGame('daily')} onZen={() => openGame('zen', 1)} onStory={playStory}/>}
 
@@ -353,7 +420,7 @@ export default function App() {
           <FlowIndicator count={chainCount} affected={affected.size} loop={loop} resolving={presentation?.phase} tapMode={tapMode} cue={milestone}/>
           {lesson && !presentation && <LessonCoach lesson={lesson} path={lessonPath} count={chainCount} loop={loop} tapMode={tapMode} onSkip={() => finishLesson(lesson)}/> }
           {!lesson && session.mode === 'classic' && currentStage.lesson && <details className="level-tip"><summary><Lightbulb size={14}/>Bölüm ipucu<ChevronRight size={14}/></summary><p>{currentStage.lesson}</p></details>}
-          <div className="board-wrap"><div ref={boardRef} className={`board ${loop ? 'looping' : ''} ${path.length ? `charging charge-${energy.tier}` : ''} ${presentation ? `resolving-${presentation.phase}` : ''}`} aria-busy={!!presentation} aria-label="6 satır, 6 sütun kristal tahtası"
+          <div className="board-wrap"><div ref={boardRef} className={`board ${aiming ? `aiming aiming-${aiming}` : ''} ${loop ? 'looping' : ''} ${path.length ? `charging charge-${energy.tier}` : ''} ${presentation ? `resolving-${presentation.phase}` : ''}`} aria-busy={!!presentation} aria-label="6 satır, 6 sütun kristal tahtası"
             onPointerMove={event => {
               if (pointerRef.current !== event.pointerId) return;
               const element = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-cell-coord]');
@@ -381,9 +448,10 @@ export default function App() {
               return <button key={`${r},${c}`} data-cell-coord={`${r},${c}`} className={`gem-cell ${selected || loopHighlight ? 'selected' : ''} ${hinted ? 'hinted' : ''} ${cell.locked ? 'frozen' : ''} ${lessonIndex >= 0 && lesson ? 'lesson-stone' : ''} ${lessonIndex >= 0 && lesson && lessonNext ? 'lesson-next' : ''}`} style={{ '--gem-color': def.hex, '--gem-light': def.secondaryHex } as React.CSSProperties}
                 aria-label={`${lesson && lessonIndex >= 0 ? `Alıştırma ${lessonIndex + 1}, ` : hinted ? `İpucu ${hintIndex + 1}, ` : ''}${def.name}, ${def.symbol} simgesi, satır ${r + 1}, sütun ${c + 1}${cell.locked ? ', mühürlü' : ''}${cell.special !== 'none' ? cell.special === 'nova_3x3' ? ', rezonans çekirdeği' : ', ışık kanalı' : ''}${cell.multiplier > 1 ? `, ${cell.multiplier} kat puan` : ''}`} aria-pressed={selected} aria-disabled={cell.locked || gameLocked}
                 onPointerDown={event => {
+                  if (aiming) { if (event.button === 0 && !gameLocked && !cell.locked) { event.preventDefault(); fireBooster(aiming, [r, c]); } return; }
                   if (tapMode || event.button !== 0 || gameLocked || cell.locked || resolvingRef.current || pointerRef.current !== null) return;
                   event.preventDefault(); event.currentTarget.focus({ preventScroll: true }); clearPath(); pointerRef.current = event.pointerId; extendPath(r, c);
-                }} onClick={event => { if (!gameLocked && (tapMode || event.detail === 0)) { if (event.detail === 0) setTapMode(true); extendPath(r, c); } }}>
+                }} onClick={event => { if (aiming) { if (event.detail === 0 && !gameLocked && !cell.locked) fireBooster(aiming, [r, c]); return; } if (!gameLocked && (tapMode || event.detail === 0)) { if (event.detail === 0) setTapMode(true); extendPath(r, c); } }}>
                 <div key={cell.id} className={`gem-motion ${fall ? 'falling' : ''} ${clearing ? 'clearing' : ''}`} onAnimationEnd={event => {
                   if (event.target === event.currentTarget && event.animationName === 'gem-fall' && presentation) timeline.landed(presentation.id, cell.id);
                 }} style={fall ? { '--drop-x': `${fall.x * presentation!.step.x}px`, '--drop-y': `${fall.y * presentation!.step.y}px`, '--fall-duration': `${fall.duration}ms`, '--fall-delay': `${fall.delay}ms`, '--fall-opacity': fall.fresh ? 0 : 1 } as React.CSSProperties : undefined}><PrismGemArtwork gemStyle={profile.gemStyle} cell={cell} isSelected={selected} isLoopHighlighted={loopHighlight} chargeTier={selected || loopHighlight ? energy.tier : 0} previewPower={chainCount >= 4 && r === path[loop ? path.length-2 : path.length-1]?.[0] && c === path[loop ? path.length-2 : path.length-1]?.[1] ? (loop || chainCount >= 6 ? 'nova' : 'channel') : undefined}/></div>
@@ -396,12 +464,13 @@ export default function App() {
           </div></div>
           <div className="game-status-row"><div className="game-feedback" role="status" aria-live="polite">{presentation ? presentation.phase === 'clearing' ? 'Enerji yayılıyor…' : 'Çekirdekler yerleşiyor…' : path.length ? loop ? `${affected.size} taş dalgaya katılıyor · halka 2× puan` : chainCount < 3 ? `${chainCount} taş seçildi · en az 3 bağla` : `${affected.size} taş temizlenecek${currentPower ? ` · ${currentPower} oluşacak` : ''}` : feedback}</div>
           <button className="link-commit" disabled={gameLocked || chainCount < 3} onClick={commit}><Check size={16}/>Patlat</button></div>
+          <BoosterBar session={session} meta={metaOf(profile)} aiming={aiming} disabled={gameLocked} onUse={kind => fireBooster(kind)} onCancel={() => setAiming(null)}/>
           <div className="game-tools"><button className="input-mode-button" disabled={gameLocked} aria-pressed={tapMode} aria-label={tapMode ? 'Dokunarak bağla; sürükleme moduna geç' : 'Sürükleyerek bağla; dokunma moduna geç'} onClick={() => { clearPath(); setTapMode(!tapMode); }}>{tapMode ? <Hand size={20}/> : <MousePointer2 size={20}/>}<span>{tapMode ? 'Dokun' : 'Sürükle'}</span></button><button disabled={gameLocked} onClick={() => { clearPath(); const best = findBestHint(session); setHint(best?.path ?? []); setFeedback(best?.message ?? 'Bu tahtada bağlantı yok. Karıştırmayı dene.'); }}><Lightbulb size={21}/><span>İpucu</span></button><button disabled={gameLocked || session.shufflesLeft === 0} onClick={() => { if (resolvingRef.current) return; clearPath(); updateSession(shuffleSession(session)); setHint([]); setFeedback('Çekirdekler yeniden dizildi.'); }}><Shuffle size={21}/><span>Karıştır <b>{session.shufflesLeft}</b></span></button><button className="more-tool" onClick={() => { clearPath(); setOverlay('more'); }} aria-haspopup="dialog"><MoreHorizontal size={21}/><span>Diğer</span></button></div>
           {session.mode === 'daily' && session.dailyKey !== leagueDay() && <p className="quiet-note">Önceki günün bulmacasını oynuyorsun. Ana ekrandan bugünün bulmacasını açabilirsin.</p>}
         </section>
       </div>}
     </main>
-    <nav className="bottom-nav" aria-label="Ana gezinme">{tabs.map(tab => <button key={tab.id} aria-current={page === tab.id || (page === 'game' && tab.id === 'journey') ? 'page' : undefined} onClick={() => goPage(tab.id)}><tab.icon size={22}/><span>{tab.label}</span></button>)}</nav>
+    <nav className="bottom-nav" aria-label="Ana gezinme">{tabs.map(tab => <button key={tab.id} aria-current={page === tab.id || (page === 'game' && tab.id === 'journey') ? 'page' : undefined} onClick={() => goPage(tab.id)}><tab.icon size={22}/><span>{tab.label}</span>{tab.id === 'rewards' && pending > 0 && <span className="nav-badge" aria-label={`${pending} ödül bekliyor`}>{pending}</span>}</button>)}</nav>
     {toast && <div className="toast" role="status"><span>{toast}</span><button aria-label="Bildirimi kapat" onClick={() => setToast(null)}><X size={17}/></button></div>}
     {overlay === 'story' && storyToPlay && <Dialog key="story" className="story-dialog" title={storyToPlay.title} onClose={()=>setOverlay(null)}><StoryPlayer key={storyToPlay.id} record={storyToPlay} reducedMotion={reducedMotion}/><p className="story-transcript">{storyToPlay.text}</p><button className="primary-button full" onClick={()=>setOverlay(null)}>Devam et<ArrowRight size={18}/></button></Dialog>}
     {overlay === 'more' && <MoreDialog session={session} onClose={() => setOverlay(null)} onRestart={() => setOverlay('restart')} onShare={() => { setOverlay(null); void share(); }}
@@ -409,10 +478,13 @@ export default function App() {
       onLearnLoop={() => { if (!findLessonPath(session.grid, 'loop').length) { setToast('Bu tahtada hazır dört taşlı halka yok. Taşları bağlayarak yeni bir halka yolu aç.'); setOverlay(null); return; } setLesson('loop'); setOverlay(null); }}
       onGuide={() => setOverlay('guide')}/>}
     {overlay === 'guide' && <GuideDialog gemStyle={profile.gemStyle} onClose={() => setOverlay(null)}/>}
-    {overlay === 'restart' && <RestartDialog session={session} onClose={() => setOverlay(null)} onConfirm={restart}/>}
+    {overlay === 'chest' && chestLoot && <ChestDialog kind={chestLoot.kind} items={describeLoot(chestLoot.loot)} reducedMotion={reducedMotion} more={metaOf(profile).chests.length}
+      onClose={() => { setOverlay(null); setChestLoot(null); }}
+      onNext={() => { const result = openChest(profile); if (!result) return; setProfile(result.profile); setChestLoot({ kind: result.kind, loot: result.loot }); sound.playVictory(); }}/>}
+    {overlay === 'restart' && <RestartDialog streakAtRisk={session.mode === 'classic' && session.outcome === 'playing' && session.turns > 0 && metaOf(profile).winStreak > 0} session={session} onClose={() => setOverlay(null)} onConfirm={restart}/>}
     {overlay === 'erase' && <EraseDialog onClose={() => setOverlay(null)} onConfirm={() => { clearPath(); setProfile(recordSession(defaultProfile(), createSession('classic'))); setOverlay(null); setToast('Bu cihazdaki oyun ilerlemesi sıfırlandı.'); }}/>}
     {overlay === 'privacy' && <PrivacyDialog onClose={() => setOverlay(null)}/>}
-    {page === 'game' && session.outcome !== 'playing' && overlay === null && !presentation && !burst && <ResultDialog profile={profile} session={session} mystery={mystery} discoveryScene={discoveryScene} reducedMotion={reducedMotion}
+    {page === 'game' && session.outcome !== 'playing' && overlay === null && !presentation && !burst && <ResultDialog reward={reward} profile={profile} session={session} mystery={mystery} discoveryScene={discoveryScene} reducedMotion={reducedMotion}
       previousBest={previousBest} adBusy={adBusy} adNotice={adNotice} canSave={!saveError} onNavigate={goPage} onWatchAd={() => { void continueWithAd(); }}
       onNextStage={() => openGame('classic', session.stageId + 1)} onRestart={restart} onShare={() => { void share(); }}/>}
   </div>;

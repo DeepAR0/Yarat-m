@@ -173,6 +173,13 @@ export function previewClear(grid: CellData[][], path: Coord[], isClosedLoop: bo
   if (isClosedLoop) grid.forEach((row, r) => row.forEach((cell, c) => {
     if (!cell.locked && cell.color === primaryColorCleared) cleared.add(`${r},${c}`);
   }));
+  const triggeredSpecialsCount = expandSpecials(grid, cleared);
+  const clearedCoords = [...cleared].map(key => key.split(',').map(Number) as Coord);
+  return { clearedCoords, triggeredSpecialsCount };
+}
+
+/** Grows `cleared` (keys "r,c") through every power stone it reaches; returns how many powers fired. */
+function expandSpecials(grid: CellData[][], cleared: Set<string>): number {
   const queue = [...cleared];
   let triggeredSpecialsCount = 0;
   for (let i = 0; i < queue.length; i++) {
@@ -186,8 +193,27 @@ export function previewClear(grid: CellData[][], path: Coord[], isClosedLoop: bo
       if (affected && !grid[nr][nc].locked && !cleared.has(key)) { cleared.add(key); queue.push(key); }
     }
   }
+  return triggeredSpecialsCount;
+}
+
+/** Booster blast: clears the given open stones (plus any powers they reach), opens adjacent seals and refills. */
+export function blastCells(grid: CellData[][], seeds: Coord[], rng: () => number) {
+  const cleared = new Set(seeds.filter(([r, c]) => grid[r]?.[c] && !grid[r][c].locked).map(([r, c]) => `${r},${c}`));
+  if (!cleared.size) return null;
+  const triggeredSpecialsCount = expandSpecials(grid, cleared);
   const clearedCoords = [...cleared].map(key => key.split(',').map(Number) as Coord);
-  return { clearedCoords, triggeredSpecialsCount };
+  const colorCounts = Object.fromEntries(PRISM_COLORS.map(color => [color, 0])) as Record<PrismColor, number>;
+  const next: CellData[][] = grid.map(row => row.map(cell => ({ ...cell, isNew: false })));
+  let unlockedCount = 0, totalMultiplier = 1;
+  for (const [r, c] of clearedCoords) {
+    colorCounts[grid[r][c].color]++;
+    totalMultiplier = Math.min(27, totalMultiplier * grid[r][c].multiplier);
+    for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      if (next[r + dr]?.[c + dc]?.locked) { next[r + dr][c + dc].locked = false; unlockedCount++; }
+    }
+  }
+  const filled = refillGrid(next, cleared, 'down', rng);
+  return { nextGrid: ensurePlayable(filled, rng), clearedCoords, clearedCount: cleared.size, colorCounts, totalMultiplier, unlockedCount, triggeredSpecialsCount };
 }
 
 export function resolvePathOnGrid(grid: CellData[][], path: Coord[], isClosedLoop: boolean, rng: () => number = Math.random, direction: FlowDirection = 'down') {

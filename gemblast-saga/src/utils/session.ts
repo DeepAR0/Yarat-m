@@ -1,5 +1,5 @@
 import { CellData, FlowDirection, FLOW_DIRECTIONS, GameMode, localDateKey, getDailyStageConfig, PRISM_COLORS, PrismColor, StageConfig, STAGES, LEGACY_STAGES } from '../types/game';
-import { Coord, createGrid, createRNG, ensurePlayable, flowForPath, isValidPath, resolvePathOnGrid, shuffleGrid } from './boardEngine';
+import { blastCells, Coord, createGrid, createRNG, ensurePlayable, flowForPath, isValidPath, resolvePathOnGrid, shuffleGrid } from './boardEngine';
 import { type CompetitionTrace, validTrace, leagueDay } from './competition';
 import { emptyMeta, parseMeta, type MetaState } from './meta';
 
@@ -23,6 +23,8 @@ export interface Session {
   competition?: CompetitionTrace;
   rewardedContinueUsed?: boolean;
   campaignVersion?: 2;
+  boostersUsed?: number;
+  streakBonus?: number;
 }
 export interface Settings { sound: boolean; haptics: boolean; reducedMotion: boolean }
 export interface Profile {
@@ -116,12 +118,39 @@ export function commitMove(session: Session, path: Coord[], loop: boolean) {
     turns: session.turns + 1, rngState: rng.getState(), flow, usedDirections: ['down'], loopsMade: session.loopsMade + Number(loop),
     sealsOpened: session.sealsOpened + result.unlockedCount, specialsTriggered: session.specialsTriggered + result.triggeredSpecialsCount,
     ...(session.competition ? {competition:{version:1 as const,actions:[...session.competition.actions,{kind:'move' as const,path:path.map(([r,c])=>[r,c] as Coord),loop}]}} : {}) };
+  settleOutcome(next);
+  return { next, result, earned };
+}
+/** Marks a classic/daily attempt won when every goal is met, or lost when no moves remain. */
+function settleOutcome(next: Session) {
+  if (next.mode === 'zen') return;
   const stage = stageFor(next);
-  if (session.mode !== 'zen') {
-    if (next.score >= stage.targetScore && stage.quotas.every(q => collected[q.color] >= q.target) &&
-      next.loopsMade >= (stage.loopsTarget ?? (stage.requireLoop ? 1 : 0)) && next.sealsOpened >= (stage.sealsTarget ?? 0) && next.specialsTriggered >= (stage.specialsTarget ?? 0)) next.outcome = 'won';
-    else if (next.movesLeft <= 0) next.outcome = 'lost';
-  }
+  if (next.score >= stage.targetScore && stage.quotas.every(q => next.collected[q.color] >= q.target) &&
+    next.loopsMade >= (stage.loopsTarget ?? (stage.requireLoop ? 1 : 0)) && next.sealsOpened >= (stage.sealsTarget ?? 0) && next.specialsTriggered >= (stage.specialsTarget ?? 0)) next.outcome = 'won';
+  else if (next.movesLeft <= 0) next.outcome = 'lost';
+}
+
+export type BoosterAction = 'hammer' | 'prism' | 'moves';
+/** Boosters never touch the daily puzzle, so league replays stay verifiable. */
+export function canUseBooster(session: Session, kind: BoosterAction): boolean {
+  return session.mode !== 'daily' && session.outcome === 'playing' && (kind !== 'moves' || session.mode === 'classic');
+}
+export function applyBooster(session: Session, kind: BoosterAction, target?: Coord) {
+  if (!canUseBooster(session, kind)) return null;
+  const used = (session.boostersUsed ?? 0) + 1;
+  if (kind === 'moves') return { next: { ...session, movesLeft: session.movesLeft + 3, boostersUsed: used }, result: null, earned: 0 };
+  const cell = target && session.grid[target[0]]?.[target[1]];
+  if (!cell || cell.locked) return null;
+  const seeds: Coord[] = kind === 'hammer' ? [target!] : session.grid.flatMap((row, r) => row.flatMap((c, col): Coord[] => !c.locked && c.color === cell.color ? [[r, col]] : []));
+  const rng = createRNG(session.rngState);
+  const result = blastCells(session.grid, seeds, rng);
+  if (!result) return null;
+  const earned = result.clearedCount * 30 * result.totalMultiplier;
+  const collected = { ...session.collected };
+  PRISM_COLORS.forEach(c => { collected[c] += result.colorCounts[c]; });
+  const next: Session = { ...session, grid: result.nextGrid, score: session.score + earned, collected, rngState: rng.getState(), boostersUsed: used,
+    sealsOpened: session.sealsOpened + result.unlockedCount, specialsTriggered: session.specialsTriggered + result.triggeredSpecialsCount };
+  settleOutcome(next);
   return { next, result, earned };
 }
 export function shuffleSession(session: Session): Session {
@@ -179,6 +208,8 @@ export function validateSession(value: unknown, mode: GameMode): value is Sessio
   if (value.competition !== undefined && (mode!=='daily' || !validTrace(value.competition))) return false;
   if (value.rewardedContinueUsed !== undefined && (mode !== 'classic' || typeof value.rewardedContinueUsed !== 'boolean')) return false;
   if (value.campaignVersion !== undefined && (mode !== 'classic' || value.campaignVersion !== 2)) return false;
+  if (value.boostersUsed !== undefined && (mode === 'daily' || !count(value.boostersUsed))) return false;
+  if (value.streakBonus !== undefined && (mode !== 'classic' || !count(value.streakBonus))) return false;
   const collected = value.collected;
   if (!isRecord(collected) || !PRISM_COLORS.every(c => count(collected[c]))) return false;
   const ids = new Set<string>();
@@ -221,4 +252,20 @@ export function parseProfile(text: string | null): Profile {
     if (['classic', 'daily', 'zen'].includes(String(raw.lastMode))) profile.lastMode = raw.lastMode as GameMode;
     return profile;
   } catch { return profile; }
+}
+
+/** Win-streak reward: fresh classic attempts start with ready power stones (1 → one channel, 2 → two, 3+ → two channels and a Nova). */
+export function applyStreakBonus(session: Session, streak: number): Session {
+  if (session.mode !== 'classic' || session.turns > 0 || session.streakBonus !== undefined || streak <= 0) return session;
+  const tier = Math.min(3, streak);
+  const rng = createRNG(session.rngState);
+  const grid = session.grid.map(row => row.map(cell => ({ ...cell })));
+  const open = grid.flatMap((row, r) => row.flatMap((cell, c): Coord[] => !cell.locked && cell.special === 'none' ? [[r, c]] : []));
+  const powers = (['pulse_row', 'pulse_col', 'nova_3x3'] as const).slice(0, tier);
+  for (const power of powers) {
+    if (!open.length) break;
+    const [r, c] = open.splice(Math.floor(rng() * open.length), 1)[0];
+    grid[r][c] = { ...grid[r][c], special: power, multiplier: power === 'nova_3x3' ? 3 : 1 };
+  }
+  return { ...session, grid, rngState: rng.getState(), streakBonus: tier };
 }
