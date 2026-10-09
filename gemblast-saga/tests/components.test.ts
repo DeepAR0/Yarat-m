@@ -31,3 +31,14 @@ test('Game HUD shows stage goals; result dialog offers the next stage after a wi
     adBusy: false, adNotice: '', canSave: true, onNavigate: noop, onWatchAd: noop, onNextStage: noop, onRestart: noop, onShare: noop }));
   assert.ok(html.includes('Diyar uyandı!') && html.includes('1.234') && html.includes('Sonraki bölüm'));
 });
+
+test('The result dialog celebrates a beaten record but not a first clear or a lost classic attempt', () => {
+  const profile = defaultProfile();
+  const render = (session: ReturnType<typeof createSession>, previousBest: number | null) => renderToStaticMarkup(createElement(ResultDialog, { profile, session, mystery: mysteryProgress(profile), discoveryScene: undefined, reducedMotion: true,
+    previousBest, adBusy: false, adNotice: '', canSave: true, onNavigate: noop, onWatchAd: noop, onNextStage: noop, onRestart: noop, onShare: noop }));
+  const classic = createSession('classic', 3);
+  assert.ok(render({ ...classic, outcome: 'won', score: 900 }, 500).includes('Yeni rekor!'));
+  assert.ok(!render({ ...classic, outcome: 'won', score: 900 }, 0).includes('Yeni rekor!'));
+  assert.ok(!render({ ...classic, outcome: 'lost', score: 900 }, 500).includes('Yeni rekor!'));
+  assert.ok(render({ ...createSession('daily'), outcome: 'lost', score: 700 }, 300).includes('Önceki en iyi: 300'));
+});
