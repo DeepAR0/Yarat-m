@@ -13,8 +13,11 @@ export function RewardsPage({ profile, today, onCheckIn, onMission, onOpenChest,
   const meta = metaOf(profile), login = loginStatus(meta, today), board = missionBoard(meta, today);
   const chest = starChestProgress(profile), achievements = achievementBoard(profile);
   const doneAchievements = achievements.filter(a => a.claimed).length;
+  // Claimable first, then the closest goals; finished ones sink to the bottom.
+  const rank = (a: (typeof achievements)[number]) => a.claimed ? 2 : a.done ? -1 : 1 - a.progress / a.target;
+  const ordered = [...achievements].sort((x, y) => rank(x) - rank(y));
   return <>
-    <div className="page-intro"><div className="eyebrow">HER GÜN YENİ BİR IŞIK</div><h1>Ödüller</h1><p>Her gün uğra, görevleri bitir, sandıkları aç. Kristallerle güçlendirici al.</p></div>
+    <div className="page-intro compact"><h1>Ödüller</h1></div>
     <section className="wallet-strip" aria-label="Envanter">
       <div className="wallet-shards"><span className="shard-icon" aria-hidden="true">✦</span><strong>{format(meta.shards)}</strong><small>kristal</small></div>
       {(Object.keys(BOOSTERS) as BoosterKind[]).map(kind => { const Icon = BOOSTER_ICONS[kind]; return <div key={kind}><Icon size={18}/><strong>{meta.boosters[kind]}</strong><small>{BOOSTERS[kind].name}</small></div>; })}
@@ -52,7 +55,7 @@ export function RewardsPage({ profile, today, onCheckIn, onMission, onOpenChest,
     </section>
 
     <section className="reward-card" aria-labelledby="shop-title">
-      <header><h2 id="shop-title">Kristal dükkânı</h2><span>Gerçek para yok, yalnızca oyunda kazanılan kristal</span></header>
+      <header><h2 id="shop-title">Kristal dükkânı</h2><span>Oyunda kazanılan kristalle</span></header>
       <ul className="shop-list">{(Object.keys(BOOSTERS) as BoosterKind[]).map(kind => { const Icon = BOOSTER_ICONS[kind]; return <li key={kind}>
         <Icon size={24}/><div><strong>{BOOSTERS[kind].name}</strong><small>{BOOSTERS[kind].text}</small></div>
         <button className="shop-buy" disabled={meta.shards < BOOSTERS[kind].price} onClick={() => onBuy(kind)}>{BOOSTERS[kind].price} ✦</button></li>; })}</ul>
@@ -60,10 +63,14 @@ export function RewardsPage({ profile, today, onCheckIn, onMission, onOpenChest,
 
     <section className="reward-card" aria-labelledby="ach-title">
       <header><h2 id="ach-title">Başarımlar</h2><span>{doneAchievements} / {achievements.length}</span></header>
-      <ul className="achievement-list">{achievements.map(a => <li key={a.id} className={`achievement ${a.claimed ? 'unlocked' : ''} ${a.done && !a.claimed ? 'ready' : ''}`}>
+      <ul className="achievement-list">{ordered.slice(0, 4).map(a => <li key={a.id} className={`achievement ${a.claimed ? 'unlocked' : ''} ${a.done && !a.claimed ? 'ready' : ''}`}>
         <Award size={23}/><div><strong>{a.title}</strong><p>{a.text}</p>{!a.claimed && <small>{format(a.progress)} / {format(a.target)} · {a.reward} ✦</small>}</div>
         {a.claimed ? <Check size={20}/> : a.done ? <button className="mission-claim" onClick={() => onAchievement(a.id)}>Al</button> : <LockKeyhole size={17}/>}
       </li>)}</ul>
+      {ordered.length > 4 && <details className="more-achievements"><summary>Diğer {ordered.length - 4} başarım</summary><ul className="achievement-list">{ordered.slice(4).map(a => <li key={a.id} className={`achievement ${a.claimed ? 'unlocked' : ''} ${a.done && !a.claimed ? 'ready' : ''}`}>
+        <Award size={23}/><div><strong>{a.title}</strong><p>{a.text}</p>{!a.claimed && <small>{format(a.progress)} / {format(a.target)} · {a.reward} ✦</small>}</div>
+        {a.claimed ? <Check size={20}/> : a.done ? <button className="mission-claim" onClick={() => onAchievement(a.id)}>Al</button> : <LockKeyhole size={17}/>}
+      </li>)}</ul></details>}
     </section>
   </>;
 }

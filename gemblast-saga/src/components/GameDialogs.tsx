@@ -1,15 +1,16 @@
-import { ArrowRight, ChevronRight, Flame, LockKeyhole, Trophy, Zap, Hand, Lightbulb, Orbit, RotateCcw, Share2, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ChevronRight, Flame, LockKeyhole, Trophy, Zap, Hand, MousePointer2, Lightbulb, Orbit, RotateCcw, Share2, ShieldCheck } from 'lucide-react';
 import type { Profile, Session } from '../utils/session';
 import { PRISM_DEFINITIONS, type StageConfig } from '../types/game';
 import { format } from '../utils/format';
 import { Dialog } from './Dialog';
 import { PrismGemArtwork } from './PrismGemArtwork';
 
-export function MoreDialog({ session, onClose, onRestart, onShare, onLearnLink, onLearnLoop, onGuide }: {
-  session: Session; onClose: () => void; onRestart: () => void; onShare: () => void; onLearnLink: () => void; onLearnLoop: () => void; onGuide: () => void;
+export function MoreDialog({ session, tapMode, onTapMode, onClose, onRestart, onShare, onLearnLink, onLearnLoop, onGuide }: {
+  session: Session; tapMode: boolean; onTapMode: () => void; onClose: () => void; onRestart: () => void; onShare: () => void; onLearnLink: () => void; onLearnLoop: () => void; onGuide: () => void;
 }) {
   return <Dialog title="Oyun seçenekleri" onClose={onClose}>
     <div className="more-actions">
+      <button onClick={onTapMode}>{tapMode ? <MousePointer2 size={20}/> : <Hand size={20}/>}<span><strong>{tapMode ? 'Sürükleyerek bağla' : 'Dokunarak bağla'}</strong><small>{tapMode ? 'Parmağını taşların üzerinde gezdir' : 'Taşlara tek tek dokun, sonra Patlat'}</small></span><ChevronRight size={18}/></button>
       <button onClick={onRestart}><RotateCcw size={20}/><span><strong>Yeniden başla</strong><small>{session.mode === 'daily' ? 'Aynı günlük bulmacayı tekrar dene' : 'Yeni bir taş dizilimiyle dene'}</small></span><ChevronRight size={18}/></button>
       <button onClick={onShare}><Share2 size={20}/><span><strong>Skoru paylaş</strong><small>{format(session.score)} puan</small></span><ChevronRight size={18}/></button>
       <button disabled={session.outcome !== 'playing'} onClick={onLearnLink}><Hand size={20}/><span><strong>Bağlamayı öğren</strong><small>Tahta üzerinde kısa alıştırma</small></span><ChevronRight size={18}/></button>
@@ -47,7 +48,8 @@ export function StageIntro({ session, stage, gemStyle, streak, onClose }: { sess
       {!!stage.sealsTarget && <li><LockKeyhole size={20}/><b>{stage.sealsTarget}</b><small>mühür</small></li>}
       {!!stage.specialsTarget && <li><Zap size={20}/><b>{stage.specialsTarget}</b><small>güç</small></li>}
     </ul>
-    {stage.armoredCoords?.length ? <p className="intro-tip">Kristal kabuklu mühürler iki darbe ister.</p> : null}
+    {stage.lesson && <p className="intro-tip">{stage.lesson}</p>}
+    {stage.armoredCoords?.length && !stage.lesson?.includes('abuk') ? <p className="intro-tip">Kristal kabuklu mühürler iki darbe ister.</p> : null}
     {session.streakBonus ? <p className="intro-streak"><Flame size={18}/>Alev serisi {streak}: tahtada {session.streakBonus} hazır güç taşı var!</p> : null}
     <button className="primary-button full" onClick={onClose}>Başla<ArrowRight size={18}/></button>
   </Dialog>;

@@ -1,7 +1,7 @@
 .mystery-card,.mystery-journal { margin:16px 0; padding:18px; border:1px solid #d6e9df; border-radius:22px; background:linear-gradient(125deg,#ffffffec,#edf9f2); box-shadow:0 6px 24px #8dc6ac12,inset 0 1px 0 #fff; }
 .mystery-card .eyebrow { display:flex;align-items:center;gap:7px; }
 .mystery-card h2 { font-size:21px;line-height:1.25;margin:9px 0; }
-.mystery-card p,.journal-note,.journal-entry p,.result-discovery p { color:#50685e;font-size:13px;line-height:1.65;margin:8px 0; }
+.mystery-card p,.journal-entry p,.result-discovery p{ color:#50685e;font-size:13px;line-height:1.65;margin:8px 0; }
 .restoration { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:15px 0; }
 .restoration small { display:block;font-size:10px;color:#50685e;margin-top:7px; }
 .restoration-lights { display:grid;grid-template-columns:repeat(5,1fr);gap:4px; }

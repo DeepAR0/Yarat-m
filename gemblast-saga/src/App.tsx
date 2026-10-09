@@ -1,6 +1,6 @@
 /** @license SPDX-License-Identifier: Apache-2.0 */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Check, ChevronRight, Diamond, Gift, Hand, MousePointer2, MoreHorizontal, Lightbulb, Map, Settings as SettingsIcon, Shuffle, Star, Trophy, X } from 'lucide-react';
+import { ArrowRight, Diamond, Gift, Lightbulb, Map, Settings as SettingsIcon, Star, Trophy, X } from 'lucide-react';
 import { CellData, GameMode, PRISM_DEFINITIONS, STAGES } from './types/game';
 import { areNeighbors, Coord, previewClear, isValidPath } from './utils/boardEngine';
 import { commitMove, createSession, defaultProfile, nextUnlocked, parseProfile, Profile, recordSession, Session, restartSession, sessionToOpen, shuffleSession, stageFor, starsFor } from './utils/session';
@@ -20,7 +20,7 @@ import { findBestHint } from './utils/hint';
 import { BOOSTERS, buyBooster, metaOf, pendingRewards, settleFinish, spendBooster, trackMove, type BoosterKind, type ChestKind, type FinishSummary, type Loot, claimLogin, claimMission, claimAchievement, openChest, describeLoot, restoreStreak, syncChests } from './utils/meta';
 import { ChestDialog } from './components/ChestDialog';
 import { localDateKey } from './types/game';
-import { BoosterBar } from './components/BoosterBar';
+import { GameToolbar } from './components/BoosterBar';
 import { RewardsPage } from './pages/RewardsPage';
 import { GemBurst, GemEffects } from './components/GemEffects';
 import { ChainEnergy } from './components/ChainEnergy';
@@ -398,7 +398,6 @@ export default function App() {
   const affected = new Set(clearPreview.clearedCoords.map(([r,c]) => `${r},${c}`));
   const chainCount = loop ? path.length - 1 : path.length;
   const energy = chainEnergy(chainCount, loop);
-  const currentPower = loop || chainCount >= 6 ? '3× Nova' : chainCount === 5 ? '2× kanal' : chainCount === 4 ? 'Işık kanalı' : null;
 
 
   if (!ready || !session) return <div className="loading-screen"><Diamond size={44} /><h1>Gemblast Saga</h1><p role="status">Çekirdekler uyanıyor…</p></div>;
@@ -433,9 +432,8 @@ export default function App() {
         <section className="game-surface" aria-label="Oyun alanı">
           <GameHud session={session} stage={currentStage} gemStyle={profile.gemStyle} sound={profile.settings.sound} onBack={() => goPage('journey')}
             onToggleSound={() => setProfile(p => ({ ...p, settings: { ...p.settings, sound: !p.settings.sound } }))}/>
-          <FlowIndicator count={chainCount} affected={affected.size} loop={loop} resolving={presentation?.phase} tapMode={tapMode} cue={milestone}/>
+          <FlowIndicator count={chainCount} affected={affected.size} loop={loop} resolving={presentation?.phase} tapMode={tapMode} cue={milestone} idle={feedback} onCommit={commit}/>
           {lesson && !presentation && <LessonCoach lesson={lesson} path={lessonPath} count={chainCount} loop={loop} tapMode={tapMode} onSkip={() => finishLesson(lesson)}/> }
-          {!lesson && session.mode === 'classic' && currentStage.lesson && <details className="level-tip"><summary><Lightbulb size={14}/>Bölüm ipucu<ChevronRight size={14}/></summary><p>{currentStage.lesson}</p></details>}
           <div className="board-wrap"><div ref={boardRef} className={`board ${aiming ? `aiming aiming-${aiming}` : ''} ${loop ? 'looping' : ''} ${path.length ? `charging charge-${energy.tier}` : ''} ${presentation ? `resolving-${presentation.phase}` : ''}`} aria-busy={!!presentation} aria-label="6 satır, 6 sütun kristal tahtası"
             onPointerMove={event => {
               if (pointerRef.current !== event.pointerId) return;
@@ -478,10 +476,10 @@ export default function App() {
             }))}</div>
             {burst && <GemEffects burst={burst}/>}
           </div></div>
-          <div className="game-status-row"><div className="game-feedback" role="status" aria-live="polite">{presentation ? presentation.phase === 'clearing' ? 'Enerji yayılıyor…' : 'Çekirdekler yerleşiyor…' : path.length ? loop ? `${affected.size} taş dalgaya katılıyor · halka 2× puan` : chainCount < 3 ? `${chainCount} taş seçildi · en az 3 bağla` : `${affected.size} taş temizlenecek${currentPower ? ` · ${currentPower} oluşacak` : ''}` : feedback}</div>
-          <button className="link-commit" disabled={gameLocked || chainCount < 3} onClick={commit}><Check size={16}/>Patlat</button></div>
-          <BoosterBar session={session} meta={metaOf(profile)} aiming={aiming} disabled={gameLocked} onUse={kind => fireBooster(kind)} onCancel={() => setAiming(null)}/>
-          <div className="game-tools"><button className="input-mode-button" disabled={gameLocked} aria-pressed={tapMode} aria-label={tapMode ? 'Dokunarak bağla; sürükleme moduna geç' : 'Sürükleyerek bağla; dokunma moduna geç'} onClick={() => { clearPath(); setTapMode(!tapMode); }}>{tapMode ? <Hand size={20}/> : <MousePointer2 size={20}/>}<span>{tapMode ? 'Dokun' : 'Sürükle'}</span></button><button disabled={gameLocked} onClick={() => { clearPath(); const best = findBestHint(session); setHint(best?.path ?? []); setFeedback(best?.message ?? 'Bu tahtada bağlantı yok. Karıştırmayı dene.'); }}><Lightbulb size={21}/><span>İpucu</span></button><button disabled={gameLocked || session.shufflesLeft === 0} onClick={() => { if (resolvingRef.current) return; clearPath(); updateSession(shuffleSession(session)); setHint([]); setFeedback('Çekirdekler yeniden dizildi.'); }}><Shuffle size={21}/><span>Karıştır <b>{session.shufflesLeft}</b></span></button><button className="more-tool" onClick={() => { clearPath(); setOverlay('more'); }} aria-haspopup="dialog"><MoreHorizontal size={21}/><span>Diğer</span></button></div>
+          <GameToolbar session={session} meta={metaOf(profile)} aiming={aiming} disabled={gameLocked} onUse={kind => fireBooster(kind)} onCancel={() => setAiming(null)}
+            onHint={() => { clearPath(); const best = findBestHint(session); setHint(best?.path ?? []); setFeedback(best?.message ?? 'Bu tahtada bağlantı yok. Karıştırmayı dene.'); }}
+            onShuffle={() => { if (resolvingRef.current) return; clearPath(); updateSession(shuffleSession(session)); setHint([]); setFeedback('Çekirdekler yeniden dizildi.'); }}
+            onMore={() => { clearPath(); setOverlay('more'); }}/>
           {session.mode === 'daily' && session.dailyKey !== leagueDay() && <p className="quiet-note">Önceki günün bulmacasını oynuyorsun. Ana ekrandan bugünün bulmacasını açabilirsin.</p>}
         </section>
       </div>}
@@ -489,7 +487,7 @@ export default function App() {
     <nav className="bottom-nav" aria-label="Ana gezinme">{tabs.map(tab => <button key={tab.id} aria-current={page === tab.id || (page === 'game' && tab.id === 'journey') ? 'page' : undefined} onClick={() => goPage(tab.id)}><tab.icon size={22}/><span>{tab.label}</span>{tab.id === 'rewards' && pending > 0 && <span className="nav-badge" aria-label={`${pending} ödül bekliyor`}>{pending}</span>}</button>)}</nav>
     {toast && <div className="toast" role="status"><span>{toast}</span><button aria-label="Bildirimi kapat" onClick={() => setToast(null)}><X size={17}/></button></div>}
     {overlay === 'story' && storyToPlay && <Dialog key="story" className="story-dialog" title={storyToPlay.title} onClose={()=>setOverlay(null)}><StoryPlayer key={storyToPlay.id} record={storyToPlay} reducedMotion={reducedMotion}/><p className="story-transcript">{storyToPlay.text}</p><button className="primary-button full" onClick={()=>setOverlay(null)}>Devam et<ArrowRight size={18}/></button></Dialog>}
-    {overlay === 'more' && <MoreDialog session={session} onClose={() => setOverlay(null)} onRestart={() => setOverlay('restart')} onShare={() => { setOverlay(null); void share(); }}
+    {overlay === 'more' && <MoreDialog session={session} tapMode={tapMode} onTapMode={() => { clearPath(); setTapMode(!tapMode); setOverlay(null); }} onClose={() => setOverlay(null)} onRestart={() => setOverlay('restart')} onShare={() => { setOverlay(null); void share(); }}
       onLearnLink={() => { setLesson('link'); setOverlay(null); }}
       onLearnLoop={() => { if (!findLessonPath(session.grid, 'loop').length) { setToast('Bu tahtada hazır dört taşlı halka yok. Taşları bağlayarak yeni bir halka yolu aç.'); setOverlay(null); return; } setLesson('loop'); setOverlay(null); }}
       onGuide={() => setOverlay('guide')}/>}

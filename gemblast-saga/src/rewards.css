@@ -138,3 +138,20 @@
 .intro-streak { display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 14px;padding:9px;border:1px solid #c98a4a;border-radius:12px;background:#4a3324;color:#ffc58a;font-size:12px;font-weight:700; }
 .reduce-motion .intro-goals li, .reduce-motion .moves-continue { animation:none; }
 .booster { padding:6px 5px;gap:5px; } .booster span { white-space:nowrap; }
+
+/* Compact game screen: one status line, one tool row */
+.flow-indicator.flow-idle { justify-content:center;min-height:32px; }
+.flow-message { font-size:12px;color:var(--muted);text-align:center;line-height:1.35; }
+.flow-indicator .link-commit { min-height:30px;padding:4px 12px;font-size:12px; }
+.game-toolbar { display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:5px;margin:8px 0 0;padding-top:8px;border-top:1px solid #2f4d57; }
+.game-toolbar .tool { position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;padding:5px 2px;border:1px solid #4f6d72;border-radius:13px 5px 13px 5px;background:linear-gradient(145deg,#2c4a56,#1e3947);color:#e9f1ea;font-size:10px;font-weight:700; }
+.game-toolbar .tool span { white-space:nowrap; }
+.game-toolbar .tool>b { position:absolute;top:-6px;right:-3px;min-width:18px;height:18px;padding:0 4px;display:grid;place-items:center;border-radius:9px;background:#f5ce82;color:#3b2a0b;font-size:10px; }
+.game-toolbar .tool>b.booster-price { background:#2a2f4a;color:#c9b5ff;border:1px solid #6d649a;font-size:9px; }
+.game-toolbar .booster { border-color:#8a7fb0;background:linear-gradient(145deg,#3d4468,#283553);color:#efe4ff;flex-direction:column;gap:3px;min-height:54px;padding:5px 2px; }
+.game-toolbar .tool:disabled { opacity:.4; }
+.page-intro.compact { margin-bottom:12px; } .page-intro.compact h1 { margin:0; }
+.more-achievements { margin-top:8px; } .more-achievements summary { cursor:pointer;padding:10px;text-align:center;font-size:12px;font-weight:700;color:#f5ce82;list-style:none; }
+.more-achievements summary::-webkit-details-marker { display:none; }
+.map-sidequests>button:not(:first-child) { flex-direction:column;justify-content:center;color:#a0e7da;font-size:10px;min-width:62px; }
+.map-sidequests { margin:10px 0 12px; }

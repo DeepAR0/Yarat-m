@@ -15,7 +15,7 @@ const noop = () => {};
 test('Extracted pages render their profile data', () => {
   const profile = defaultProfile(); profile.stages[1] = { stars: 3, best: 500 }; profile.zenBest = 6000;
   const collection = renderToStaticMarkup(createElement(CollectionPage, { profile, onStory: noop, onGemStyle: noop }));
-  assert.ok(collection.includes('Koleksiyonun') && collection.includes('6.000'));
+  assert.ok(collection.includes('Koleksiyon') && collection.includes('6.000'));
   const settings = renderToStaticMarkup(createElement(SettingsPage, { settings: { sound: false, haptics: true, reducedMotion: false }, privacyOptions: false, onToggle: noop, onAdPrivacy: noop, onGuide: noop, onPrivacy: noop, onErase: noop }));
   assert.ok(settings.includes('aria-checked="false"') && !settings.includes('Reklam gizlilik'));
 });

@@ -23,7 +23,7 @@ React/TypeScript bağlantı bulmacası. Aynı renkteki komşu taşları bağla, 
 - **Akıllı ipucu**: hedeflere göre en değerli hamleyi adım numaralarıyla gösterir.
 
 **Kod**
-- `App.tsx` sayfa ve bileşenlere bölündü: `pages/`, `GameHud`, `GameDialogs`, `ResultDialog`, `BoosterBar`, `ChestDialog`.
+- `App.tsx` sayfa ve bileşenlere bölündü: `pages/`, `GameHud`, `GameDialogs`, `ResultDialog`, `GameToolbar` (BoosterBar.tsx), `ChestDialog`. Ekranlar sade: oyunda tek durum satırı ve tek araç sırası; kullanılmayan ~25 KB CSS temizlendi.
 - 107 test. `npm run balance:probe` 55 öğretici dışı bölümün tamamı için bot tanığı üretir (`tests/fixtures/campaign-witnesses.json`).
 - Eski kayıtlar başlangıç cüzdanıyla (100 ✦ + birer güçlendirici) açılır. Hak edilmiş yıldız/diyar sandıkları açılışta verilir.
 
