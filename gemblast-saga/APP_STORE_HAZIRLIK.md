@@ -1,4 +1,6 @@
-# Gemblast Saga 1.6.1 — App Store teslimi
+# Gemblast Saga 2.0.0 — App Store teslimi
+
+> 2.0.0 notu: web kaynağı 2.0.0'dır (60 bölüm, ödül sistemleri). Native proje en son 1.6.1 ile eşitlendi; gönderimden önce Mac'te `npm ci && npm run ios:preflight` çalıştır. Bu adım version değerini 2.0.0 yapar, `release/config.json` buildNumber'ını artır. Yeni ekran görüntüleri gerekir: Ödüller sekmesi, 2. perde haritası, sandık açılışı.
 
 8 Ekim 2026. Kaynak hazırlığıdır; imzalı IPA veya App Store onayı değildir.
 

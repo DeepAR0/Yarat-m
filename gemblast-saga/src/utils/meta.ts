@@ -84,7 +84,7 @@ export function grantLoot(meta: MetaState, loot: Loot): MetaState {
 }
 export function describeLoot(loot: Loot): string[] {
   const parts = loot.shards ? [`${loot.shards} kristal`] : [];
-  for (const [kind, n] of Object.entries(loot.boosters) as [BoosterKind, number][]) if (n) parts.push(`${n}× ${BOOSTERS[kind].name}`);
+  for (const [kind, n] of Object.entries(loot.boosters) as [BoosterKind, number][]) if (n) parts.push(`${BOOSTERS[kind].name} ×${n}`);
   return parts;
 }
 

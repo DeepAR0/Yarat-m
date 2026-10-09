@@ -1,16 +1,35 @@
-# Gemblast Saga 1.8.0 — web geliştirme
+# Gemblast Saga 2.0.0 — web geliştirme
 
-React/TypeScript bağlantı bulmacası. Kristal mabet teması, petrol taş yüzeyler ve altın çerçeveler; renk, şekil ve farklı sembollere sahip beş taş; keskin ve taşların arkasında kalan bağlantı çizgisi. Kapalı halkalar tüm aynı renk açık taşları temizler. Yerçekimi aşağı doğrudur.
+React/TypeScript bağlantı bulmacası. Aynı renkteki komşu taşları bağla, başlangıca dönüp halka kapatarak bütün rengi temizle, uzun zincirlerle güç taşları oluştur. Yerçekimi aşağı doğrudur.
 
-30 bölüm, günlük bulmaca, serbest mod, dokunarak veya sürükleyerek bağlama, ses, titreşim, azaltılmış hareket, yerel kayıt, paylaşım ve koleksiyon içerir. Web ligi Sites/D1 üzerinde hesap kimliğiyle korunur; sunucu hamleleri yeniden oynatarak skorları doğrular. Web ligi ve Apple Game Center farklı sıralamalardır.
+## 2.0 — Tam oyun sürümü
 
-Ana ekran artık 30 duraklı, üç diyarı geçen kıvrımlı ilerleme haritasıdır. Zaferler fenerleri, suyu ve takımyıldızını geri getirir; hikâye kayıtları duraklardan açılır. Keşfet/Macera tekrarı kaldırıldı. Günlük ve serbest oyun haritanın girişindedir.
+**İçerik**
+- 60 bölüm, 6 diyar: Köz Vadisi, Gelgit Uçurumu, Eter Zirvesi (1. perde) ve Sis Ormanı, Kristal Mağaralar, Gök Adaları (2. perde).
+- Yeni engel: **kristal kabuklu mühür**. İki darbe ister; bir hamlede her mühüre en fazla bir darbe.
+- Hikâye iki perde, 20 kayıt: 1. perde kulede Mira'yı kurtarır (30 durak + 7 günlük yankı), 2. perde "İlk bekçi" sırrını çözer (bölüm 60).
+- Üçüncü taş görünümü "Sis incileri" (bölüm 40).
+
+**Geri getiren sistemler** (`src/utils/meta.ts`)
+- **Kristal (✦)**: yalnızca oyunda kazanılan para birimi. İlk zafer, yeni yıldız, günlük bulmaca, görevler, sandıklar ve başarımlar verir. Gerçek para ile satın alma yoktur.
+- **Güçlendiriciler**: Çekiç (tek taş), Prizma (bir rengin tamamı), +3 Hamle. Hamle harcamazlar, deterministiktir. Günlük bulmacada kapalıdır, böylece lig skorları doğrulanabilir kalır.
+- **7 günlük giriş takvimi**: üst üste gelen günlerde artan ödüller, 7. gün haftalık hazine sandığı.
+- **Günlük 3 görev**: her gün tarihe göre seçilir. Üçü de bitince görev sandığı verilir.
+- **Sandıklar**: her 12 yıldızda yıldız sandığı, her diyar bitince diyar hazinesi. Açılış animasyonu ve sesi var.
+- **14 ödüllü başarım**.
+- **Alev serisi**: üst üste zaferler yeni denemeye 1-3 hazır güç taşı koyar. Yarıda bırakmak seriyi sıfırlar. Kaybettikten sonra devam edilirse seri geri gelir.
+- **"Az kaldı" ekranı**: kayıpta eksik hedefler listelenir, +3 Hamle ile devam etme seçeneği sunulur.
+- **Bölüm giriş kartı**, sıralı yıldız patlaması, ödül/sandık sesleri, Ödüller sekmesinde bekleyen ödül rozeti.
+- **Akıllı ipucu**: hedeflere göre en değerli hamleyi adım numaralarıyla gösterir.
+
+**Kod**
+- `App.tsx` sayfa ve bileşenlere bölündü: `pages/`, `GameHud`, `GameDialogs`, `ResultDialog`, `BoosterBar`, `ChestDialog`.
+- 107 test. `npm run balance:probe` 55 öğretici dışı bölümün tamamı için bot tanığı üretir (`tests/fixtures/campaign-witnesses.json`).
+- Eski kayıtlar başlangıç cüzdanıyla (100 ✦ + birer güçlendirici) açılır. Hak edilmiş yıldız/diyar sandıkları açılışta verilir.
 
 ## Güncel çalışma sırası
-9 Ekim 2026: Kullanıcı önce web oyununun bitirilmesini, iOS paketinin yalnızca
-kendisi istediğinde hazırlanmasını belirtti. Güncel web 1.8.0; son hazırlanmış
-iOS kaynak ZIP'i 1.6.1. Bu harita turunda native sync/versiyon/build/ZIP
-yapılmadı. Aşağıdaki native komutlar gelecekteki paketleme aşaması içindir.
+9 Ekim 2026: Web sürümü 2.0.0. iOS native projesindeki `MARKETING_VERSION` hâlâ 1.6.1; `npm run ios:sync`
+(configure-ios.mjs) bunu package.json'daki 2.0.0 ile eşitler. Native paket kullanıcı istediğinde hazırlanır.
 
 ## Çalıştırma ve kontroller
 

@@ -1,12 +1,14 @@
-# App Review notes — Gemblast Saga 1.5.1
+# App Review notes — Gemblast Saga 2.0.0
 
 Use after production configuration and real-device validation are complete. Do not describe unchecked device results as passed.
 
-Gemblast Saga is a bundled connection puzzle with 30 sequential levels, a date-seeded daily puzzle, and unlimited free play. Core gameplay and local progress work offline, without an app-created account. Capacitor Preferences, native sharing and haptics are used. Assets are bundled; the app does not load the hosted website for gameplay.
+Gemblast Saga is a bundled connection puzzle with 60 sequential levels in six realms, a date-seeded daily puzzle, and unlimited free play. Core gameplay and local progress work offline, without an app-created account. Capacitor Preferences, native sharing and haptics are used. Assets are bundled; the app does not load the hosted website for gameplay.
 
 Connect at least three neighboring same-color gems (diagonal neighbors are allowed). Refill gravity is downward. Closing a noncrossing loop with at least four unique cells clears all unlocked gems of that color. Longer chains create row/column channels and Nova powers. Meet all displayed score, color, seal and special goals. Drag and tap-to-connect are available. Settings include sound, haptics and reduced motion.
 
 The app contains optional AdMob rewarded ads. Placement: lose a Classic/Adventure level by exhausting moves; choose the clearly labeled "Reklam izle · +5 hamle" button. Completing the rewarded ad grants five additional moves once for that attempt, on the same board. Dismissal without earning grants nothing. A rewarded win earns at most one star. Free retry is always available. Daily competition and free play do not grant rewarded advantages. There are no banners, automatic interstitials, subscriptions or purchases.
+
+Version 2.0 adds an in-game soft currency (crystals) earned only by playing: wins, daily check-in, daily missions, achievements and reward chests. Crystals buy boosters (Hammer, Prism, +3 Moves). There is no way to buy crystals, boosters or chests with real money, and chests are never sold. Boosters are disabled in the daily puzzle so competition results stay comparable.
 
 Google UMP consent is checked before ad requests. Requests specify non-personalized ads; the app does not make its own ATT authorization request. Applicable privacy options are available in Settings. Denying consent does not gate gameplay. The Google SDK's privacy manifest/data collection must be reflected in the submitted privacy answers.
 
