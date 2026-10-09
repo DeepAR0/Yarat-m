@@ -210,7 +210,8 @@ export function parseProfile(text: string | null): Profile {
     if (raw.ruleset === 2 && isRecord(raw.sessions)) for (const mode of ['classic', 'daily', 'zen'] as const) if (validateSession(raw.sessions[mode], mode)) {
       const session = raw.sessions[mode];
       const rng = createRNG(session.rngState);
-      session.grid = ensurePlayable(session.grid, rng);
+      // A single unplayable saved board drops only that attempt, never the rest of the profile.
+      try { session.grid = ensurePlayable(session.grid, rng); } catch { continue; }
       session.rngState = rng.getState();
       profile.sessions[mode] = session;
     }

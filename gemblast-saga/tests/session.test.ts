@@ -85,3 +85,14 @@ test('Previous core progress migrates but incompatible active games do not', () 
   assert.equal(restored.tutorialSeen,false);
   assert.equal(restored.ruleset,2);
 });
+
+test('An unplayable saved board drops only that attempt and keeps the rest of the profile', () => {
+  const profile = recordSession(recordSession(defaultProfile(), createSession('classic', 1)), createSession('zen'));
+  profile.stages[1] = { stars: 3, best: 900 };
+  profile.sessions.classic!.grid.forEach(row => row.forEach(cell => { cell.locked = true; }));
+  const loaded = parseProfile(JSON.stringify(profile));
+  assert.equal(loaded.sessions.classic, undefined);
+  assert.ok(loaded.sessions.zen);
+  assert.equal(loaded.lastMode, 'zen');
+  assert.deepEqual(loaded.stages[1], { stars: 3, best: 900 });
+});
