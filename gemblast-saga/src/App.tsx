@@ -1,7 +1,7 @@
 /** @license SPDX-License-Identifier: Apache-2.0 */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, Orbit, ChevronRight, Compass, Diamond, Flame, Infinity as InfinityIcon, Hand, MousePointer2, MoreHorizontal, Lightbulb, LockKeyhole, Map, RotateCcw, Settings as SettingsIcon, Share2, ShieldCheck, Shuffle, Sparkles, Star, Trophy, Volume2, VolumeX, X, Zap } from 'lucide-react';
-import { CellData, GameMode, localDateKey, PRISM_COLORS, PRISM_DEFINITIONS, STAGES } from './types/game';
+import { ArrowRight, Check, ChevronRight, Diamond, Hand, MousePointer2, MoreHorizontal, Lightbulb, Map, Settings as SettingsIcon, Shuffle, Star, Trophy, X } from 'lucide-react';
+import { CellData, GameMode, PRISM_DEFINITIONS, STAGES } from './types/game';
 import { areNeighbors, Coord, findSuggestedPath, previewClear, isValidPath } from './utils/boardEngine';
 import { commitMove, createSession, defaultProfile, nextUnlocked, parseProfile, Profile, recordSession, Session, restartSession, sessionToOpen, shuffleSession, stageFor, starsFor } from './utils/session';
 import { haptic, listenToAppState, nativeStartup, readSave, shareScore, writeSave } from './utils/native';
@@ -10,14 +10,18 @@ import { PrismGemArtwork } from './components/PrismGemArtwork';
 import { JourneyMap } from './components/JourneyMap';
 import { FlowIndicator } from './components/FlowIndicator';
 import { Dialog } from './components/Dialog';
+import { EraseDialog, GuideDialog, MoreDialog, PrivacyDialog, RestartDialog } from './components/GameDialogs';
+import { GameHud } from './components/GameHud';
+import { ResultDialog } from './components/ResultDialog';
+import { CollectionPage } from './pages/CollectionPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { format, modeLabel } from './utils/format';
 import { GemBurst, GemEffects } from './components/GemEffects';
 import { ChainEnergy } from './components/ChainEnergy';
 import { GemFalls, MoveTimeline, planGemFalls } from './utils/movePresentation';
 import { StoryPlayer } from './components/StoryPlayer';
-import { Emblem } from './components/Emblem';
 import { resultRecord, type StoryRecord } from './utils/storyPresentation';
-import { MysteryJournal } from './components/Mystery';
-import { ECHOES, GEM_STYLES, gemArtwork, mysteryProgress, styleAvailable } from './utils/mystery';
+import { mysteryProgress } from './utils/mystery';
 import { chainEnergy } from './utils/chainEnergy';
 import { findLessonPath, Lesson } from './utils/lesson';
 import { LessonCoach, LessonRoute } from './components/LessonCoach';
@@ -29,15 +33,7 @@ import { adPrivacyRequired, prepareAdConsent, rewardedAdsAvailable, showAdPrivac
 type Page = 'journey' | 'collection' | 'settings' | 'league' | 'game';
 type Overlay = 'guide' | 'more' | 'restart' | 'erase' | 'privacy' | 'story' | null;
 type Presentation = { id: number; phase: 'clearing' | 'falling'; grid: CellData[][]; cleared: Set<string>; falls: GemFalls; step: { x: number; y: number } };
-const format = (value: number) => value.toLocaleString('tr-TR');
-const modeLabel: Record<GameMode, string> = { classic: 'Macera', daily: 'Günlük uyanış', zen: 'Serbest akış' };
 const tabs = [{ id: 'journey', label: 'Macera', icon: Map }, { id: 'league', label: 'Lig', icon: Trophy }, { id: 'collection', label: 'Koleksiyon', icon: Diamond }, { id: 'settings', label: 'Ayarlar', icon: SettingsIcon }] as const;
-
-function StarRating({ stars, label = true }: { stars: number; label?: boolean }) {
-  return <span className="star-rating" aria-label={label ? `${stars} / 3 yıldız` : undefined} aria-hidden={!label}>
-    {[1, 2, 3].map(i => <Star key={i} size={15} className={i <= stars ? 'earned' : ''} fill={i <= stars ? 'currentColor' : 'none'} />)}
-  </span>;
-}
 
 export default function App() {
   const [profile, setProfile] = useState<Profile>(defaultProfile);
@@ -309,7 +305,6 @@ export default function App() {
   const mystery = mysteryProgress(profile);
   const today = leagueDay();
   const dailyFound = (profile.mysteryDays ?? profile.dailyWins).includes(today);
-  const completed = Object.values(profile.stages).filter(entry => entry.stars > 0).length;
   const discoveryScene = session ? resultRecord(profile,session) : undefined;
   const currentStage = session ? stageFor(session) : STAGES[0];
   const lessonPath = useMemo(() => lesson && session ? findLessonPath(session.grid, lesson) : [], [lesson, session?.grid]);
@@ -320,7 +315,6 @@ export default function App() {
   const clearPreview = session ? previewClear(session.grid, path, loop) : { clearedCoords: [], triggeredSpecialsCount: 0 };
   const affected = new Set(clearPreview.clearedCoords.map(([r,c]) => `${r},${c}`));
   const chainCount = loop ? path.length - 1 : path.length;
-  const loopGoal = currentStage.loopsTarget ?? (currentStage.requireLoop ? 1 : 0);
   const energy = chainEnergy(chainCount, loop);
   const currentPower = loop || chainCount >= 6 ? '3× Nova' : chainCount === 5 ? '2× kanal' : chainCount === 4 ? 'Işık kanalı' : null;
 
@@ -339,42 +333,17 @@ export default function App() {
       {page === 'league' && <League best={profile.dailyBest} daily={profile.sessions.daily} onPlay={day => openGame('daily', undefined, day)}/> }
       {page === 'journey' && <JourneyMap profile={profile} reducedMotion={reducedMotion} dailyFound={dailyFound} onPlay={id => openGame('classic', id)} onDaily={() => openGame('daily')} onZen={() => openGame('zen', 1)} onStory={playStory}/>}
 
-      {page === 'collection' && <>
-        <div className="page-intro"><div className="eyebrow">BEŞ ÇEKİRDEK · TEK ENERJİ</div><h1>Koleksiyonun</h1><p>Köz, Gelgit, Güneş, Eter ve Yaşam. Alev, damla, yıldız, kristal ve yaprak: her çekirdeğin kendine özgü bir simgesi var.</p></div>
-        <section className="stats-strip"><div><Star/><strong>{totalStars}</strong><span>Toplanan yıldız</span></div><div><Flame/><strong>{profile.dailyWins.length}</strong><span>Günlük zafer</span></div><div><InfinityIcon/><strong>{format(profile.zenBest)}</strong><span>Zen rekoru</span></div></section>
-        <MysteryJournal profile={profile} onPlay={playStory}/>
-        <div className="section-heading"><h2>Taş görünümün</h2><span>Yalnızca görünüm</span></div>
-        <section className="gem-styles" aria-label="Taş tasarımı seç">{GEM_STYLES.map(style => {
-          const available = styleAvailable(profile, style.id), selected = (profile.gemStyle ?? 'motif') === style.id;
-          return <button className={`gem-style ${selected ? 'selected' : ''}`} key={style.id} disabled={!available} aria-pressed={selected} onClick={() => setProfile(p => ({...p, gemStyle: style.id}))}><span className="style-samples" aria-hidden="true">{PRISM_COLORS.map(color => <img src={gemArtwork(color, style.id)} alt="" key={color} width="48" height="48" loading="lazy"/>)}</span><strong>{style.title}</strong><small>{style.description}</small><span>{selected ? 'Seçili' : available ? 'Bu görünümü kullan' : `Bölüm ${style.stage} sonunda açılır`}</span></button>;
-        })}</section>
-        <section className="crystal-collection">{PRISM_COLORS.map(color => {
-          const def = PRISM_DEFINITIONS[color];
-          return <div key={color} className="collection-gem" style={{ '--gem-color': def.hex } as React.CSSProperties}><div className="gem-preview"><PrismGemArtwork gemStyle={profile.gemStyle} cell={{ id: color, color, multiplier: 1, special: 'none', locked: false }} isSelected={false} isLoopHighlighted={false}/></div><h2>{def.name}</h2><span>{def.symbol} simgesi</span></div>;
-        })}</section>
-        <div className="section-heading"><h2>Kazandığın izler</h2></div><section className="achievement-list">
-          {[{ title: 'İlk uyanış', text: 'İlk macera bölümünü tamamla.', done: completed >= 1, icon: Sparkles }, { title: 'Diyar gezgini', text: '10 macera bölümünü tamamla.', done: completed >= 10, icon: Compass }, { title: 'Günün yıldızı', text: 'Bir günlük bulmacayı tamamla.', done: profile.dailyWins.length >= 1, icon: Flame }, { title: 'Zen ustası', text: 'Zen modunda 5.000 puana ulaş.', done: profile.zenBest >= 5000, icon: InfinityIcon }].map(a => <div className={`achievement ${a.done ? 'unlocked' : ''}`} key={a.title}><a.icon size={23}/><div><strong>{a.title}</strong><p>{a.text}</p></div>{a.done ? <Check size={20}/> : <LockKeyhole size={17}/>}</div>)}
-        </section>
-      </>}
+      {page === 'collection' && <CollectionPage profile={profile} onStory={playStory} onGemStyle={gemStyle => setProfile(p => ({...p, gemStyle}))}/>}
 
-      {page === 'settings' && <>
-        <div className="page-intro"><div className="eyebrow">OYUNU KENDİ RİTMİNE AYARLA</div><h1>Ayarlar</h1><p>Daha sakin, daha sessiz ya da daha dokunsal.</p></div>
-        <section className="settings-list">{([{ key: 'sound', title: 'Oyun sesleri', text: 'Zincir boyunca yükselen notalar ve rezonans sesleri.' }, { key: 'haptics', title: 'Dokunsal geri bildirim', text: 'Desteklenen iPhone modellerinde hafif titreşim.' }, { key: 'reducedMotion', title: 'Hareketi azalt', text: 'Çekirdek hareketlerini ve ışık dalgalarını sadeleştir.' }] as const).map(setting => <div className="setting-row" key={setting.key}><div><strong id={`setting-${setting.key}`}>{setting.title}</strong><p>{setting.text}</p></div><button role="switch" aria-checked={profile.settings[setting.key]} aria-labelledby={`setting-${setting.key}`} className="switch" onClick={() => setProfile(p => ({ ...p, settings: { ...p.settings, [setting.key]: !p.settings[setting.key] } }))}><span/></button></div>)}</section>
-        <section className="settings-links"><a href="./support.html" className="secondary-button"><Lightbulb size={20}/>Yardım ve destek<ChevronRight size={18}/></a>{privacyOptions && <button onClick={() => { void showAdPrivacy().then(() => adPrivacyRequired()).then(setPrivacyOptions).catch(() => setToast('Reklam gizlilik seçenekleri açılamadı. Bağlantını kontrol edip yeniden dene.')); }}><ShieldCheck size={20}/>Reklam gizlilik tercihleri<ChevronRight size={18}/></button>}<button onClick={() => setOverlay('guide')}><Lightbulb size={20}/>Nasıl oynanır<ChevronRight size={18}/></button><button onClick={() => setOverlay('privacy')}><ShieldCheck size={20}/>Gizlilik ve verilerin<ChevronRight size={18}/></button><button className="danger-link" onClick={() => setOverlay('erase')}><RotateCcw size={20}/>Tüm ilerlemeyi sıfırla<ChevronRight size={18}/></button></section>
-        <div className="about-app"><Diamond size={24}/><strong>Gemblast Saga</strong><span>Sürüm 1.8.0 · Enerjiyi çiz, dünyayı uyandır.</span></div>
-      </>}
+      {page === 'settings' && <SettingsPage settings={profile.settings} privacyOptions={privacyOptions}
+        onToggle={key => setProfile(p => ({ ...p, settings: { ...p.settings, [key]: !p.settings[key] } }))}
+        onAdPrivacy={() => { void showAdPrivacy().then(() => adPrivacyRequired()).then(setPrivacyOptions).catch(() => setToast('Reklam gizlilik seçenekleri açılamadı. Bağlantını kontrol edip yeniden dene.')); }}
+        onGuide={() => setOverlay('guide')} onPrivacy={() => setOverlay('privacy')} onErase={() => setOverlay('erase')}/>}
 
       {page === 'game' && <div className="game-layout">
         <section className="game-surface" aria-label="Oyun alanı">
-          <div className="game-top"><button className="icon-button" aria-label="Ana ekrana dön, oyun kaydedilir" onClick={() => goPage('journey')}><ArrowLeft size={20}/></button><div><span className="eyebrow">{session.mode === 'classic' ? `BÖLÜM ${String(session.stageId).padStart(2, '0')}` : session.mode === 'daily' ? session.dailyKey : 'SINIRSIZ OYUN'}</span><h2>{session.mode === 'zen' ? 'Serbest akış' : currentStage.title}</h2></div><button className="icon-button" aria-label={profile.settings.sound ? 'Sesi kapat' : 'Sesi aç'} aria-pressed={profile.settings.sound} onClick={() => setProfile(p => ({ ...p, settings: { ...p.settings, sound: !p.settings.sound } }))}>{profile.settings.sound ? <Volume2 size={20}/> : <VolumeX size={20}/>}</button></div>
-          <div className="game-metrics"><div><span>PUAN</span><strong data-testid="score">{format(session.score)}</strong></div><div className={session.mode !== 'zen' && session.movesLeft <= 4 ? 'low-moves' : ''}><span>{session.mode === 'zen' ? 'AKIŞ' : 'HAMLE'}</span><strong data-testid="moves">{session.mode === 'zen' ? '∞' : session.movesLeft}</strong></div></div>
-          <div className="targets" aria-label="Bölüm hedefleri">
-            {session.mode !== 'zen' && <div className={`target ${session.score >= currentStage.targetScore ? 'done' : ''}`}><Trophy size={18}/><span>{format(Math.min(session.score, currentStage.targetScore))}<small> / {format(currentStage.targetScore)}</small></span><div className="target-track"><span style={{ width: `${Math.min(100, session.score / currentStage.targetScore * 100)}%` }}/></div></div>}
-            {(session.mode === 'zen' ? PRISM_COLORS.map(color => ({ color, target: 0 })) : currentStage.quotas).map(q => <div className={`target ${q.target && session.collected[q.color] >= q.target ? 'done' : ''}`} key={q.color} aria-label={`${PRISM_DEFINITIONS[q.color].name}, ${session.collected[q.color]}${q.target ? ` / ${q.target}` : ''}`}><span className="target-glyph"><PrismGemArtwork gemStyle={profile.gemStyle} cell={{ id: q.color, color: q.color, multiplier: 1, special: 'none', locked: false }} isSelected={false} isLoopHighlighted={false}/></span><span>{Math.min(session.collected[q.color], q.target || Infinity)}{q.target > 0 && <small> / {q.target}</small>}</span>{q.target > 0 && <div className="target-track"><span style={{ width: `${Math.min(100, session.collected[q.color] / q.target * 100)}%`, background: PRISM_DEFINITIONS[q.color].secondaryHex }}/></div>}</div>)}
-            {loopGoal > 0 && <div className={`target target-rule ${session.loopsMade >= loopGoal ? 'done' : ''}`} aria-label={`Halka hedefi: ${session.loopsMade} / ${loopGoal}`}><Orbit size={18}/><span>{Math.min(session.loopsMade,loopGoal)} / {loopGoal}</span>{session.loopsMade >= loopGoal && <Check size={13}/>}</div>}
-            {!!currentStage.sealsTarget && <div className={`target target-rule ${session.sealsOpened >= currentStage.sealsTarget ? 'done' : ''}`} aria-label={`Mühür hedefi: ${session.sealsOpened} / ${currentStage.sealsTarget}`}><LockKeyhole size={18}/><span>{Math.min(session.sealsOpened,currentStage.sealsTarget)} / {currentStage.sealsTarget}</span></div>}
-            {!!currentStage.specialsTarget && <div className={`target target-rule ${session.specialsTriggered >= currentStage.specialsTarget ? 'done' : ''}`} aria-label={`Güç hedefi: ${session.specialsTriggered} / ${currentStage.specialsTarget}`}><Zap size={18}/><span>{Math.min(session.specialsTriggered,currentStage.specialsTarget)} / {currentStage.specialsTarget}</span></div>}
-          </div>
+          <GameHud session={session} stage={currentStage} gemStyle={profile.gemStyle} sound={profile.settings.sound} onBack={() => goPage('journey')}
+            onToggleSound={() => setProfile(p => ({ ...p, settings: { ...p.settings, sound: !p.settings.sound } }))}/>
           <FlowIndicator count={chainCount} affected={affected.size} loop={loop} resolving={presentation?.phase} tapMode={tapMode} cue={milestone}/>
           {lesson && !presentation && <LessonCoach lesson={lesson} path={lessonPath} count={chainCount} loop={loop} tapMode={tapMode} onSkip={() => finishLesson(lesson)}/> }
           {!lesson && session.mode === 'classic' && currentStage.lesson && <details className="level-tip"><summary><Lightbulb size={14}/>Bölüm ipucu<ChevronRight size={14}/></summary><p>{currentStage.lesson}</p></details>}
@@ -428,32 +397,16 @@ export default function App() {
     <nav className="bottom-nav" aria-label="Ana gezinme">{tabs.map(tab => <button key={tab.id} aria-current={page === tab.id || (page === 'game' && tab.id === 'journey') ? 'page' : undefined} onClick={() => goPage(tab.id)}><tab.icon size={22}/><span>{tab.label}</span></button>)}</nav>
     {toast && <div className="toast" role="status"><span>{toast}</span><button aria-label="Bildirimi kapat" onClick={() => setToast(null)}><X size={17}/></button></div>}
     {overlay === 'story' && storyToPlay && <Dialog key="story" className="story-dialog" title={storyToPlay.title} onClose={()=>setOverlay(null)}><StoryPlayer key={storyToPlay.id} record={storyToPlay} reducedMotion={reducedMotion}/><p className="story-transcript">{storyToPlay.text}</p><button className="primary-button full" onClick={()=>setOverlay(null)}>Devam et<ArrowRight size={18}/></button></Dialog>}
-    {overlay === 'more' && <Dialog title="Oyun seçenekleri" onClose={() => setOverlay(null)}>
-      <div className="more-actions">
-        <button onClick={() => setOverlay('restart')}><RotateCcw size={20}/><span><strong>Yeniden başla</strong><small>{session.mode === 'daily' ? 'Aynı günlük bulmacayı tekrar dene' : 'Yeni bir taş dizilimiyle dene'}</small></span><ChevronRight size={18}/></button>
-        <button onClick={() => { setOverlay(null); void share(); }}><Share2 size={20}/><span><strong>Skoru paylaş</strong><small>{format(session.score)} puan</small></span><ChevronRight size={18}/></button>
-        <button disabled={session.outcome !== 'playing'} onClick={() => { setLesson('link'); setOverlay(null); }}><Hand size={20}/><span><strong>Bağlamayı öğren</strong><small>Tahta üzerinde kısa alıştırma</small></span><ChevronRight size={18}/></button>
-        <button disabled={session.outcome !== 'playing'} onClick={() => { if (!findLessonPath(session.grid, 'loop').length) { setToast('Bu tahtada hazır dört taşlı halka yok. Taşları bağlayarak yeni bir halka yolu aç.'); setOverlay(null); return; } setLesson('loop'); setOverlay(null); }}><Orbit size={20}/><span><strong>Halkayı öğren</strong><small>Başlangıca dön, bütün rengi uyandır</small></span><ChevronRight size={18}/></button>
-        <button onClick={() => setOverlay('guide')}><Lightbulb size={20}/><span><strong>Tüm oyun kuralları</strong><small>Güçler, mühürler ve hedefler</small></span><ChevronRight size={18}/></button>
-      </div>
-    </Dialog>}
-    {overlay === 'guide' && <Dialog title="Bağla. Halkayı kapat." onClose={() => setOverlay(null)}><p className="dialog-lead">Aynı renkteki çekirdekleri bağla ve enerjiyi büyüt. Halkayı kapatıp bütün rengi uyandır.</p><div className="guide-chain" aria-hidden="true">{[1, 2, 3].map(n => <span key={n}><PrismGemArtwork gemStyle={profile.gemStyle} cell={{ id: `guide-${n}`, color: 'coral', multiplier: 1, special: 'none', locked: false }} isSelected={true} isLoopHighlighted={false}/></span>)}<ArrowRight size={23}/><span className="guide-score">+90</span></div><ol className="guide-list"><li><strong>Aynı renkte en az 3 çekirdek bağla.</strong><p>Yatay, dikey veya çapraz sürükle. “Sürükle / Dokun” düğmesiyle bağlama modunu değiştirebilirsin. Klavyede oklarla ilerle, Enter ile seç.</p></li><li><strong>Taşlar her zaman aşağı düşer.</strong><p>Zinciri istediğin yönde çiz. Temizlenen boşluklar üstten dolar. Parlayan taşlar, hamlenden etkilenecek taşları gösterir.</p></li><li><strong>Halkayla bütün rengi temizle.</strong><p>Aynı renkten en az 4 taşı kesişmeden bağla ve başlangıç taşına dön. Tahtanın her yerindeki aynı renk açık taşlar temizlenir. Halka 2× puan ve 3× Nova kazandırır.</p></li><li><strong>Uzun zincirlerin enerjisini kullan.</strong><p>4 taş ışık kanalı; 5 taş 2× kanal; 6 ve üzeri 3× rezonans çekirdeği oluşturur. Kanal satır veya sütunu, rezonans çevresini temizler.</p></li><li><strong>Diyarın tüm hedeflerini tamamla.</strong><p>Puan ve renk hedeflerini; varsa halka, mühür veya güç hedefini bitir. Mühürlü taşları açmak için yanlarındaki taşları temizle.</p></li></ol><button className="primary-button full" onClick={() => setOverlay(null)}>Anladım, başlayalım<ArrowRight size={18}/></button></Dialog>}
-    {overlay === 'restart' && <Dialog title="Yeniden başlayalım mı?" onClose={() => setOverlay(null)}><p className="dialog-lead">Bu oyunun puanı ve hamleleri sıfırlanır. Kazandığın yıldızlar ve rekorlar korunur. {session.mode === 'daily' ? 'Günlük bulmacanın taş dizilimi aynı kalır.' : 'Taşlar yeni bir dizilimle başlar.'}</p><div className="dialog-actions"><button className="secondary-button" onClick={() => setOverlay(null)}>Oyuna dön</button><button className="primary-button" onClick={restart}>Yeniden başla</button></div></Dialog>}
-    {overlay === 'erase' && <Dialog title="İlerlemeni sıfırla" onClose={() => setOverlay(null)}><p className="dialog-lead">Tüm yıldızların, rekorların ve kayıtlı oyunların bu cihazdan silinecek. Bu işlem geri alınamaz.</p><div className="dialog-actions"><button className="secondary-button" onClick={() => setOverlay(null)}>Vazgeç</button><button className="danger-button" onClick={() => { clearPath(); setProfile(recordSession(defaultProfile(), createSession('classic'))); setOverlay(null); setToast('Bu cihazdaki oyun ilerlemesi sıfırlandı.'); }}>Tümünü sıfırla</button></div></Dialog>}
-    {overlay === 'privacy' && <Dialog title="Gizlilik ve verilerin" onClose={() => setOverlay(null)}><div className="privacy-copy"><ShieldCheck size={34}/><p>Macera ilerlemesi, yıldızlar, rekorlar ve ayarlar cihazında tutulur. iOS uygulamasında isteğe bağlı AdMob ödüllü reklamları bulunur. Reklam sağlayıcısı reklam sunumu ve ölçümü için cihaz, ağ, etkileşim ve tanılama verilerini işleyebilir. Gizlilik seçeneklerin ilgili bölgelerde gösterilir; reddetmek oyuna erişimini engellemez.</p><p>Skorunu paylaşmayı seçersen, paylaşılacak metni ve hedef uygulamayı sen belirlersin. iOS liginde Game Center kullanılır; Apple oyuncu kimliğin ve skorların Apple hizmetine iletilir. Web skor ligine katılırsan oyuncu adın, hesap kimliğin ve doğrulanmış günlük skorların sunucuda saklanır. Sıralamada diğer oyuncular yalnızca oyuncu adını ve skorunu görür. Günlük hamle kaydın, sonucu doğrulamak için sen gönderdiğinde sunucuya iletilir; hamleler kalıcı olarak saklanmaz.</p><p>Yerel ilerlemeni Ayarlar’dan sıfırlayabilirsin. Lig ekranındaki “Sıralamadaki verilerimi sil” ile sunucudaki lig adını ve skorlarını silebilirsin. Uygulamayı kaldırmak sunucudaki lig verilerini silmez. Macera kayıtları cihazlar arasında otomatik eşitlenmez.</p><p><a href="./privacy.html" className="text-button">Tam gizlilik politikasını oku<ArrowRight size={16}/></a></p></div><button className="secondary-button full" onClick={() => setOverlay(null)}>Kapat</button></Dialog>}
-    {page === 'game' && session.outcome !== 'playing' && overlay === null && !presentation && !burst && <Dialog key="result" className="result-dialog" title={session.outcome === 'won' ? 'Diyar uyandı!' : 'Bir bağlantı daha?'} onClose={() => { if (!adBusy) goPage('journey'); }}>
-      {discoveryScene && <StoryPlayer key={discoveryScene.id} record={discoveryScene} reducedMotion={reducedMotion} compact/>}
-      {!discoveryScene && <div className={`result-emblem ${session.outcome === 'won' ? 'won' : ''}`}>{session.outcome === 'won' ? <Trophy size={46}/> : <Diamond size={46}/>}</div>}
-      {session.outcome === 'won' && <StarRating stars={starsFor(session)}/>}
-      <p className="dialog-lead">{session.outcome === 'won' ? 'Tüm hedefleri tamamladın. Işık bir adım daha ilerledi.' : 'Hamleler bitti. Uzun zincirler ve renk dalgalarıyla yeniden dene.'}</p>
-      {session.outcome === 'won' && session.mode === 'classic' && <div className="result-discovery"><strong>{mystery.unlocked.at(-1)?.title ?? 'İlk ışık'}</strong><p>{mystery.unlocked.at(-1)?.stage === session.stageId ? mystery.unlocked.at(-1)?.text : mystery.next ? `Yolun bir parçası onarıldı. Bölüm ${mystery.next.stage} sonunda yeni bir kayıt açılacak.` : 'Kulenin yolu açıldı. Son Uyanış için yedi yankıyı tamamla.'}</p><button className="text-button" onClick={() => goPage('collection')}>{mystery.finale ? 'Son Uyanış’ı oku' : 'Günlüğü aç'}<Sparkles size={16}/></button></div>}
-      {session.outcome === 'won' && session.mode === 'daily' && <div className="result-discovery"><strong>{(profile.mysteryDays ?? profile.dailyWins).includes(session.dailyKey!) ? `Yankı ${Math.min(7, (profile.mysteryDays ?? profile.dailyWins).indexOf(session.dailyKey!) + 1)} · Günlüğüne kaydedildi` : 'Günlük bulmaca tamamlandı'}</strong><p>{(profile.mysteryDays ?? profile.dailyWins).includes(session.dailyKey!) ? ECHOES[(profile.mysteryDays ?? profile.dailyWins).indexOf(session.dailyKey!)]?.text : mystery.echoes === 7 ? 'Yedi yankı tamam. Günlük skorunu ligde geliştirebilirsin.' : 'Yeni yankı için bugünün bulmacasını kazan.'}</p><button className="text-button" onClick={() => goPage('collection')}>{mystery.finale ? 'Son Uyanış’ı oku' : 'Yankıları oku'}<Sparkles size={16}/></button></div>}
-      <div className="result-score"><strong>{format(session.score)}</strong><span>PUAN</span></div>
-      {rewardedAdsAvailable() && canRewardContinue(session) && <div className="reward-offer"><button className="primary-button full" disabled={adBusy || !!saveError} onClick={() => { void continueWithAd(); }}><Zap size={18}/>{adBusy ? 'Reklam hazırlanıyor…' : 'Reklam izle · +5 hamle'}</button><small>Bölüm başına bir kez. Reklamı tamamla, aynı tahtadan devam et. Bu denemede en fazla 1 yıldız kazanılır.</small></div>}
-      {adNotice && <p role="status" className="league-notice">{adNotice}</p>}
-      {adBusy && <p role="status">Reklam hazırlanıyor. Erken kapatırsan ödül verilmez.</p>}
-      {session.mode === 'daily' ? <button disabled={adBusy} className="primary-button full" onClick={() => goPage('league')}>Skoru lige gönder<Trophy size={18}/></button> : session.outcome === 'won' && session.mode === 'classic' && session.stageId < STAGES.length ? <button disabled={adBusy} className="primary-button full" onClick={() => openGame('classic', session.stageId + 1)}>Sonraki bölüm<ArrowRight size={18}/></button> : <button disabled={adBusy} className="primary-button full" onClick={session.outcome === 'won' ? () => goPage('journey') : restart}>{session.outcome === 'won' ? 'Ana ekrana dön' : 'Tekrar dene'}<ArrowRight size={18}/></button>}
-      <div className="result-secondary" inert={adBusy}>{session.mode === 'daily' && <button className="text-button" onClick={restart}>Tekrar dene</button>}<button className="text-button" onClick={() => { void share(); }}><Share2 size={17}/>Skoru paylaş</button><button className="text-button" onClick={() => goPage('journey')}>Bölümler</button></div>
-    </Dialog>}
+    {overlay === 'more' && <MoreDialog session={session} onClose={() => setOverlay(null)} onRestart={() => setOverlay('restart')} onShare={() => { setOverlay(null); void share(); }}
+      onLearnLink={() => { setLesson('link'); setOverlay(null); }}
+      onLearnLoop={() => { if (!findLessonPath(session.grid, 'loop').length) { setToast('Bu tahtada hazır dört taşlı halka yok. Taşları bağlayarak yeni bir halka yolu aç.'); setOverlay(null); return; } setLesson('loop'); setOverlay(null); }}
+      onGuide={() => setOverlay('guide')}/>}
+    {overlay === 'guide' && <GuideDialog gemStyle={profile.gemStyle} onClose={() => setOverlay(null)}/>}
+    {overlay === 'restart' && <RestartDialog session={session} onClose={() => setOverlay(null)} onConfirm={restart}/>}
+    {overlay === 'erase' && <EraseDialog onClose={() => setOverlay(null)} onConfirm={() => { clearPath(); setProfile(recordSession(defaultProfile(), createSession('classic'))); setOverlay(null); setToast('Bu cihazdaki oyun ilerlemesi sıfırlandı.'); }}/>}
+    {overlay === 'privacy' && <PrivacyDialog onClose={() => setOverlay(null)}/>}
+    {page === 'game' && session.outcome !== 'playing' && overlay === null && !presentation && !burst && <ResultDialog profile={profile} session={session} mystery={mystery} discoveryScene={discoveryScene} reducedMotion={reducedMotion}
+      adBusy={adBusy} adNotice={adNotice} canSave={!saveError} onNavigate={goPage} onWatchAd={() => { void continueWithAd(); }}
+      onNextStage={() => openGame('classic', session.stageId + 1)} onRestart={restart} onShare={() => { void share(); }}/>}
   </div>;
 }
