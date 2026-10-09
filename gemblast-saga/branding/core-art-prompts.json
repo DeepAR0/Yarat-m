@@ -1,0 +1,40 @@
+{
+  "mode": "Built-in imagegen; art-direction reference: stone-directions.png top row ÇEKİRDEK; transparent_background: true; production conversion: 512px WebP quality 86 with alpha preserved.",
+  "assets": [
+    {
+      "color": "coral",
+      "name": "Köz",
+      "description": "ruby-magenta triangular three-piece shell with a faceted teardrop light heart, like the upper-left ÇEKİRDEK object",
+      "prompt": "Use case: stylized-concept. Asset type: final transparent PNG sprite for a mobile puzzle game. Input image is an ART-DIRECTION REFERENCE, specifically its TOP ROW labeled ÇEKİRDEK, not an edit target to preserve the entire sheet. Create exactly ONE isolated ruby-magenta triangular three-piece shell with a faceted teardrop light heart, like the upper-left ÇEKİRDEK object. Same high-quality tactile mineral/crystal material as the reference, but simplify surface detail to 3-4 big planes per shell piece, so it reads well at 48px. Three detached chunky plates close around a bright core, visible dark gaps. Front view with subtle 3D depth, contained color glow and crisp broad highlights. Center the inner heart exactly at canvas center. Outer shell fills roughly 85% of the square canvas. The three outer shell pieces are predominantly at 12, 4 and 8 o'clock around the heart. Inner heart diameter approximately 28% of canvas. Real alpha transparency everywhere outside the object, no background, no floor, no ground shadow, no white glow fog outside the silhouette, no text, no labels, no other gems, no border, no icon tile. Symmetric overall visual weight, lively beautiful crystal not candy.",
+      "source": "C:\\Users\\orhnt\\.codex\\generated_images\\01a117fd-cdf4-7e12-a695-bedb3635587c\\exec-1001021a-dceb-46b0-b3bc-f4faeba76f3f.png"
+    },
+    {
+      "color": "cobalt",
+      "name": "Gelgit",
+      "description": "sapphire-cyan compact open crescent made of three swept shell pieces around a spherical light heart, like the upper-middle ÇEKİRDEK object",
+      "prompt": "Use case: stylized-concept. Asset type: final transparent PNG sprite for a mobile puzzle game. Input image is an art-direction reference, specifically its TOP ROW labeled ÇEKİRDEK. Create exactly ONE isolated sapphire-cyan compact open crescent made of three swept shell pieces around a spherical light heart, like the upper-middle ÇEKİRDEK object. Tactile 3D mineral/crystal material matching the reference's top row, but simplify to 3-4 big planes per shell piece for readability at 48px. Three detached chunky plates close around a bright inner heart, visible dark gaps, front view with subtle depth, contained saturated color glow and crisp broad highlights. Heart centered exactly at canvas center, diameter approximately 28% of canvas. Outer shell fills 85% of square canvas. Three shell pieces predominantly at 12, 4 and 8 o'clock. Real alpha transparency outside the object, no background, no floor, no shadow plane, no glow fog outside silhouette, no text, no labels, no other gems, no icon tile. Same front-facing lighting as the upper-left reference. Beautiful lively mineral rather than candy.",
+      "source": "C:\\Users\\orhnt\\.codex\\generated_images\\01a117fd-cdf4-7e12-a695-bedb3635587c\\exec-2fb41c9b-d561-40d4-822c-1a33c48ea101.png"
+    },
+    {
+      "color": "amber",
+      "name": "Güneş",
+      "description": "amber-gold three-lobed rounded triangular shell with three chunky lobes and a spherical light heart, like the upper-right ÇEKİRDEK object",
+      "prompt": "Use case: stylized-concept. Asset type: final transparent PNG sprite for a mobile puzzle game. Input image is an art-direction reference, specifically its TOP ROW labeled ÇEKİRDEK. Create exactly ONE isolated amber-gold three-lobed rounded triangular shell with three chunky lobes and a spherical light heart, like the upper-right ÇEKİRDEK object. Tactile 3D mineral/crystal material matching the reference's top row, but simplify to 3-4 big planes per shell piece for readability at 48px. Three detached chunky plates close around a bright inner heart, visible dark gaps, front view with subtle depth, contained saturated color glow and crisp broad highlights. Heart centered exactly at canvas center, diameter approximately 28% of canvas. Outer shell fills 85% of square canvas. Three shell pieces predominantly at 12, 4 and 8 o'clock. Real alpha transparency outside the object, no background, no floor, no shadow plane, no glow fog outside silhouette, no text, no labels, no other gems, no icon tile. Same front-facing lighting as the upper-left reference. Beautiful lively mineral rather than candy.",
+      "source": "C:\\Users\\orhnt\\.codex\\generated_images\\01a117fd-cdf4-7e12-a695-bedb3635587c\\exec-6e60274c-f789-4414-8987-2799c75b2f07.png"
+    },
+    {
+      "color": "violet",
+      "name": "Eter",
+      "description": "amethyst-violet oblique hexagonal three-piece shell with a diamond-shaped inner light heart; a broad compact hexagonal silhouette",
+      "prompt": "Use case: stylized-concept. Asset type: final transparent PNG mobile puzzle sprite. The reference image is art direction, its TOP ROW ÇEKİRDEK. Create ONE isolated amethyst-violet oblique hexagonal three-piece shell with a diamond-shaped inner light heart; a broad compact hexagonal silhouette. Match the chunky detached crystal shells of that row. Three separate plates near 12, 4 and 8 o'clock encircle a luminous heart, visible empty dark gaps between pieces. Front-facing premium 3D mineral, 3-4 broad chiseled planes per piece, minimal microdetail, saturated crystal edges, substantial readable silhouette at 48px. Heart centered at canvas center, diameter 28% of canvas. Overall shell fills 85% of square canvas. Contain all glow inside the silhouette. Genuine transparent alpha everywhere else. No floor, shadow plane, background, fog, words, letters, labels, extra objects, creatures, faces, flowers, leaves, metal, machines or tile frame. Distinct violet silhouette as specified.",
+      "source": "C:\\Users\\orhnt\\.codex\\generated_images\\01a117fd-cdf4-7e12-a695-bedb3635587c\\exec-b7166a50-4da2-4f03-b55e-3e722313a2b8.png"
+    },
+    {
+      "color": "emerald",
+      "name": "Yaşam",
+      "description": "emerald-green tall pointed three-piece shell, like a split crystalline seed surrounding a bright emerald inner heart; angular slender pointed silhouette, mineral rather than a plant",
+      "prompt": "Use case: stylized-concept. Asset type: final transparent PNG mobile puzzle sprite. The reference image is art direction, its TOP ROW ÇEKİRDEK. Create ONE isolated emerald-green tall pointed three-piece shell, like a split crystalline seed surrounding a bright emerald inner heart; angular slender pointed silhouette, mineral rather than a plant. Match the chunky detached crystal shells of that row. Three separate plates near 12, 4 and 8 o'clock encircle a luminous heart, visible empty dark gaps between pieces. Front-facing premium 3D mineral, 3-4 broad chiseled planes per piece, minimal microdetail, saturated crystal edges, substantial readable silhouette at 48px. Heart centered at canvas center, diameter 28% of canvas. Overall shell fills 85% of square canvas. Contain all glow inside the silhouette. Genuine transparent alpha everywhere else. No floor, shadow plane, background, fog, words, letters, labels, extra objects, creatures, faces, flowers, leaves, metal, machines or tile frame. Distinct emerald silhouette as specified.",
+      "source": "C:\\Users\\orhnt\\.codex\\generated_images\\01a117fd-cdf4-7e12-a695-bedb3635587c\\exec-b93486d6-4d00-422f-85c1-52f092d2db6d.png"
+    }
+  ]
+}

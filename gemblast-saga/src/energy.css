@@ -1,0 +1,57 @@
+/* One composited sprite per stone; cascade motion uses transforms. */
+.core-sprite{display:block;width:100%;height:100%;object-fit:contain;transition:transform .14s ease,filter .14s ease;position:relative;z-index:1}
+.core-gem.charged{filter:none}
+.core-gem.charged .core-sprite{transform:scale(1.055);filter:brightness(1.15)}
+.core-gem.sealed .core-sprite{filter:saturate(.2) brightness(.6)}
+.core-halo{inset:10%;background:radial-gradient(ellipse,var(--core-color),transparent 68%);filter:none}
+.core-gem.charged .core-halo{opacity:.48}
+.gem-motion.falling{animation:gem-fall var(--fall-duration,350ms) cubic-bezier(.22,.64,.34,1) var(--fall-delay,0ms) both;will-change:transform}
+.gem-motion.clearing{animation:gem-release .14s ease-out both}
+.resolving-falling .core-sprite{transition:none}
+.gem-cell.frozen{z-index:2;background:#19313b}
+.board.charging{border-color:#9fcec0}
+.board.charge-2{border-color:#b9dcac;box-shadow:0 0 0 2px #b9dcac16,0 16px 27px #0003}
+.board.charge-3{border-color:#efd79b;box-shadow:0 0 0 3px #efd79b20,0 16px 27px #0003}
+.board.charge-4{border-color:#fff0bd;box-shadow:0 0 0 4px #efd79b24,0 16px 27px #0003}
+.board.resolving-clearing .gem-cell{pointer-events:none}
+/* Cell backgrounds < connection < moving gem sprites < effects. Cells must
+   not isolate their sprites into a stacking context below the connection. */
+.gem-cell{isolation:auto}
+.gem-motion{z-index:2}
+.energy-ribbon{filter:none;overflow:visible;z-index:1}
+.energy-current{stroke-dasharray:12 20;animation:ribbon-current var(--energy-speed) linear infinite}
+.energy-tier-0 .energy-current{stroke-dasharray:6 28}
+.energy-tier-3 .energy-current,.energy-tier-4 .energy-current{stroke-dasharray:26 14}
+.energy-filament{stroke-dasharray:8 17;animation:ribbon-current calc(var(--energy-speed) * 1.4) linear infinite;stroke-linecap:round}
+.energy-filament.reverse{animation-direction:reverse}
+.energy-head-ring{transform-box:fill-box;transform-origin:center;animation:energy-head 1.25s ease-out infinite}
+.energy-loop .energy-head-ring{stroke:#fff0bd;stroke-width:3}
+.energy-runner{opacity:.9}
+.energy-meter{display:flex;align-items:flex-end;gap:3px;height:16px}
+.energy-meter i{display:block;width:5px;height:6px;border-radius:2px;background:#36545e}
+.energy-meter i:nth-child(2){height:8px}.energy-meter i:nth-child(3){height:10px}.energy-meter i:nth-child(4){height:13px}.energy-meter i:nth-child(5){height:16px}
+.energy-meter i.lit{background:#a6e8c6}
+.chain-level-3 .energy-meter i.lit,.chain-level-4 .energy-meter i.lit{background:#efd79b}
+.chain-level-3 strong,.chain-level-4 strong{color:#f4dfa6}
+.flow-indicator.preview{border-bottom:1px solid #96d7bd20}
+.flow-label{flex-wrap:wrap;row-gap:2px}.flow-label strong{font-size:10px}
+.energy-burst .gem-particle{width:4px;height:8px;filter:none;animation-duration:.42s;animation-delay:var(--burst-delay);box-shadow:none}
+.energy-burst .burst-ring{width:20px;height:20px;left:-10px;top:-10px;box-shadow:none;animation-duration:.32s;animation-delay:var(--burst-delay);border-width:1.5px}
+.core-flash{position:absolute;width:32px;height:32px;left:-16px;top:-16px;border-radius:50%;background:radial-gradient(circle,#fff8d8,var(--particle-color) 24%,transparent 69%);animation:core-flash .23s ease-out var(--burst-delay) both}
+.board-energy-wave{position:absolute;left:50%;top:50%;width:24%;aspect-ratio:1;translate:-50% -50%;border-radius:50%;border:1px solid var(--energy-color);background:radial-gradient(circle,transparent 52%,color-mix(in srgb,var(--energy-color) 14%,transparent) 67%,transparent 72%);animation:board-energy-wave .5s ease-out both}
+.energy-burst .points-burst{animation-duration:.65s;font-size:32px}
+.burst-tier-3 .points-burst,.burst-tier-4 .points-burst{font-size:37px;color:#fff2b9}
+.energy-burst .laser-beam{height:3px;box-shadow:0 0 7px 1px #9bfaea80;animation-duration:.28s}
+.energy-burst .laser-beam.vertical{height:auto;width:3px}
+.energy-burst .nova-wave{animation-duration:.4s;border-width:2px}
+.energy-burst.loop-burst:before{border-width:1px;animation-duration:.45s}
+@keyframes gem-fall{from{transform:translate3d(var(--drop-x),var(--drop-y),0);opacity:var(--fall-opacity,1)}75%{opacity:1}to{transform:translate3d(0,0,0);opacity:1}}
+@keyframes gem-release{40%{transform:scale(1.06);opacity:.95}to{transform:scale(.72);opacity:0}}
+@keyframes ribbon-current{to{stroke-dashoffset:-80}}
+@keyframes energy-head{from{transform:scale(.82);opacity:.85}to{transform:scale(1.25);opacity:.2}}
+@keyframes core-flash{from{transform:scale(.6);opacity:.9}to{transform:scale(1.65);opacity:0}}
+@keyframes board-energy-wave{from{transform:scale(.4);opacity:.75}to{transform:scale(5);opacity:0}}
+.reduce-motion .energy-runner,.reduce-motion .energy-filament,.reduce-motion .energy-head-ring,.reduce-motion .core-flash,.reduce-motion .board-energy-wave{display:none}
+.reduce-motion .core-gem.charged .core-sprite{transform:none}
+@media(prefers-reduced-motion:reduce){.energy-runner,.energy-filament,.energy-head-ring,.core-flash,.board-energy-wave{display:none}.core-gem.charged .core-sprite{transform:none}}
+@media(max-width:350px){.flow-label strong{font-size:9px}.energy-meter{gap:2px}.energy-meter i{width:4px}.burst-tier-3 .points-burst,.burst-tier-4 .points-burst{font-size:33px}}

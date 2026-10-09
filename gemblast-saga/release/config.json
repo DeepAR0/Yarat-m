@@ -1,0 +1,18 @@
+{
+  "buildNumber": 5,
+  "publisherName": "",
+  "supportEmail": "",
+  "supportURL": "",
+  "privacyURL": "",
+  "admob": {
+    "enabled": true,
+    "testMode": true,
+    "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+    "iosRewardedId": "ca-app-pub-3940256099942544/1712485313"
+  },
+  "gameCenter": {
+    "enabled": false,
+    "dailyLeaderboardId": "gemblast.daily.v1",
+    "weeklyLeaderboardId": "gemblast.weekly.v1"
+  }
+}

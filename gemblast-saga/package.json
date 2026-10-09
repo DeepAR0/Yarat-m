@@ -1,0 +1,49 @@
+{
+  "name": "gemblast-saga",
+  "private": true,
+  "version": "1.8.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 3000",
+    "build": "node scripts/generate-policy.mjs && tsc --noEmit && vite build && node scripts/build-worker.mjs",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "ios:add": "cap add ios --packagemanager SPM",
+    "ios:sync": "npm run build && cap sync ios && node scripts/configure-ios.mjs",
+    "ios:open": "cap open ios",
+    "release:check": "npm run typecheck && npm test && npm run build && node scripts/check-release.mjs",
+    "db:generate": "drizzle-kit generate",
+    "ios:preflight": "npm run ios:sync && node scripts/check-appstore.mjs",
+    "balance:probe": "node --import tsx scripts/balance-campaign.ts 16"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "8.2.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "^8.5.3",
+    "@capacitor/preferences": "^8.0.0",
+    "@capacitor/share": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "lucide-react": "^0.546.0",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "drizzle-kit": "0.31.10",
+    "drizzle-orm": "0.45.2",
+    "esbuild": "0.28.2",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.3"
+  }
+}

@@ -1,0 +1,51 @@
+import { readFile, writeFile, copyFile, mkdir } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const { version } = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
+const release = JSON.parse(await readFile(resolve(root, 'release/config.json'), 'utf8'));
+if (!Number.isSafeInteger(release.buildNumber) || release.buildNumber < 1) throw new Error('A positive buildNumber is required.');
+if (!/^ca-app-pub-\d{16}~\d{10}$/.test(release.admob.iosAppId)) throw new Error('Invalid AdMob iOS app ID.');
+const app = resolve(root, 'ios/App/App');
+const projectPath = resolve(root, 'ios/App/App.xcodeproj/project.pbxproj');
+let project = await readFile(projectPath, 'utf8');
+const buildId = 'A72DFAA12610070000000001', fileId = 'A72DFAA12610070000000002';
+if (!project.includes('PrivacyInfo.xcprivacy in Resources')) {
+  project = project.replace('/* Begin PBXBuildFile section */', `/* Begin PBXBuildFile section */\n\t\t${buildId} /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = ${fileId} /* PrivacyInfo.xcprivacy */; };`);
+  project = project.replace('/* Begin PBXFileReference section */', `/* Begin PBXFileReference section */\n\t\t${fileId} /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };`);
+  project = project.replace(/(504EC3061FED79650016851F \/\* App \*\/ = \{[\s\S]*?children = \()/, `$1\n\t\t\t\t${fileId} /* PrivacyInfo.xcprivacy */,`);
+  project = project.replace(/(\/\* Begin PBXResourcesBuildPhase section \*\/[\s\S]*?files = \()/, `$1\n\t\t\t\t${buildId} /* PrivacyInfo.xcprivacy in Resources */,`);
+}
+if (!project.includes(`${buildId} /* PrivacyInfo.xcprivacy in Resources */,`)) throw new Error('Manifest resource could not be registered.');
+project = project.replace(/MARKETING_VERSION = [^;]+;/g, `MARKETING_VERSION = ${version};`);
+project = project.replace(/CURRENT_PROJECT_VERSION = [^;]+;/g, `CURRENT_PROJECT_VERSION = ${release.buildNumber};`);
+if (!project.includes('CODE_SIGN_ENTITLEMENTS = App/App.entitlements;')) project = project.replace(/PRODUCT_BUNDLE_IDENTIFIER = /g, 'CODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = ');
+project = project.replace(/IPHONEOS_DEPLOYMENT_TARGET = [^;]+;/g, 'IPHONEOS_DEPLOYMENT_TARGET = 16.0;');
+await writeFile(projectPath, project);
+let info = await readFile(resolve(app, 'Info.plist'), 'utf8');
+info = info.replace(/(<key>CFBundleDevelopmentRegion<\/key>\s*)<string>[^<]+<\/string>/, '$1<string>tr</string>');
+info = info.replace(/<key>UISupportedInterfaceOrientations<\/key>\s*<array>[\s\S]*?<\/array>/, '<key>UISupportedInterfaceOrientations</key>\n\t<array><string>UIInterfaceOrientationPortrait</string></array>');
+if (!info.includes('<key>UIUserInterfaceStyle</key>')) info = info.replace('</dict>\n</plist>', '\t<key>UIUserInterfaceStyle</key><string>Light</string>\n\t<key>ITSAppUsesNonExemptEncryption</key><false/>\n</dict>\n</plist>');
+info = info.replace(/(<key>UIUserInterfaceStyle<\/key>\s*)<string>[^<]+<\/string>/, '$1<string>Light</string>');
+const setPlist = (key, value) => {
+  const pattern = new RegExp(`<key>${key}</key>\\s*(?:<string>[^<]*</string>|<array>[\\s\\S]*?</array>|<(?:true|false)\\s*/>)`);
+  info = pattern.test(info) ? info.replace(pattern, `<key>${key}</key>${value}`) : info.replace('</dict>\n</plist>', `<key>${key}</key>${value}\n</dict>\n</plist>`);
+};
+setPlist('ITSAppUsesNonExemptEncryption', '<false/>');
+setPlist('GADApplicationIdentifier', `<string>${release.admob.iosAppId}</string>`);
+setPlist('NSUserTrackingUsageDescription', '<string>İzin verirsen reklam sağlayıcısı sana uygun reklamlar sunmak ve reklamların etkisini ölçmek için cihazının reklam kimliğini kullanabilir. İzin vermeden de oynayabilirsin.</string>');
+const networks = JSON.parse(await readFile(resolve(root, 'ios-resources/skadnetwork-ids.json'), 'utf8'));
+setPlist('SKAdNetworkItems', '<array>' + networks.map(id => `<dict><key>SKAdNetworkIdentifier</key><string>${id}</string></dict>`).join('') + '</array>');
+setPlist('GemblastLeaderboardIDs', `<array><string>${release.gameCenter.dailyLeaderboardId}</string><string>${release.gameCenter.weeklyLeaderboardId}</string></array>`);
+await writeFile(resolve(app, 'App.entitlements'), '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict>' + (release.gameCenter.enabled ? '<key>com.apple.developer.game-center</key><true/>' : '') + '</dict></plist>\n');
+await writeFile(resolve(app, 'Info.plist'), info);
+await copyFile(resolve(root, 'ios-resources/PrivacyInfo.xcprivacy'), resolve(app, 'PrivacyInfo.xcprivacy'));
+await copyFile(resolve(root, 'ios-resources/LaunchScreen.storyboard'), resolve(app, 'Base.lproj/LaunchScreen.storyboard'));
+const iconDir = resolve(app, 'Assets.xcassets/AppIcon.appiconset');
+const splashDir = resolve(app, 'Assets.xcassets/Splash.imageset');
+await mkdir(iconDir, { recursive: true }); await mkdir(splashDir, { recursive: true });
+await copyFile(resolve(root, 'branding/app-icon-1024.png'), resolve(iconDir, 'AppIcon-512@2x.png'));
+await copyFile(resolve(root, 'branding/launch-core.png'), resolve(splashDir, 'gemblast-launch.png'));
+await writeFile(resolve(splashDir, 'Contents.json'), JSON.stringify({ images: [{ idiom: 'universal', filename: 'gemblast-launch.png', scale: '1x' }], info: { author: 'xcode', version: 1 } }, null, 2));
+console.log('iOS icon, launch screen, privacy manifest, portrait iPhone and version configured.');

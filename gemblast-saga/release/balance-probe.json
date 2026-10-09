@@ -1,0 +1,230 @@
+{
+  "method": "Bounded greedy heuristic; not human win rates. Fixed seeds; no gameplay adaptation.",
+  "results": [
+    {
+      "stageId": 6,
+      "moves": 12,
+      "score": 900,
+      "trials": 16,
+      "wins": 15,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 7,
+      "moves": 13,
+      "score": 1500,
+      "trials": 16,
+      "wins": 13,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 8,
+      "moves": 14,
+      "score": 2200,
+      "trials": 16,
+      "wins": 14,
+      "withContinue": 15,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 9,
+      "moves": 15,
+      "score": 2800,
+      "trials": 16,
+      "wins": 16,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 10,
+      "moves": 14,
+      "score": 5000,
+      "trials": 16,
+      "wins": 11,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 11,
+      "moves": 14,
+      "score": 3200,
+      "trials": 16,
+      "wins": 13,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 12,
+      "moves": 14,
+      "score": 3550,
+      "trials": 16,
+      "wins": 16,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 13,
+      "moves": 15,
+      "score": 3900,
+      "trials": 16,
+      "wins": 16,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 14,
+      "moves": 15,
+      "score": 4250,
+      "trials": 16,
+      "wins": 16,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 15,
+      "moves": 16,
+      "score": 4600,
+      "trials": 16,
+      "wins": 14,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 16,
+      "moves": 15,
+      "score": 4950,
+      "trials": 16,
+      "wins": 13,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 17,
+      "moves": 16,
+      "score": 5300,
+      "trials": 16,
+      "wins": 11,
+      "withContinue": 14,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 18,
+      "moves": 16,
+      "score": 5650,
+      "trials": 16,
+      "wins": 6,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 19,
+      "moves": 17,
+      "score": 6000,
+      "trials": 16,
+      "wins": 14,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 20,
+      "moves": 16,
+      "score": 6350,
+      "trials": 16,
+      "wins": 7,
+      "withContinue": 13,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 21,
+      "moves": 16,
+      "score": 6500,
+      "trials": 16,
+      "wins": 6,
+      "withContinue": 15,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 22,
+      "moves": 16,
+      "score": 7050,
+      "trials": 16,
+      "wins": 10,
+      "withContinue": 15,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 23,
+      "moves": 17,
+      "score": 7600,
+      "trials": 16,
+      "wins": 6,
+      "withContinue": 15,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 24,
+      "moves": 17,
+      "score": 8150,
+      "trials": 16,
+      "wins": 12,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 25,
+      "moves": 18,
+      "score": 8700,
+      "trials": 16,
+      "wins": 5,
+      "withContinue": 14,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 26,
+      "moves": 17,
+      "score": 9250,
+      "trials": 16,
+      "wins": 6,
+      "withContinue": 12,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 27,
+      "moves": 19,
+      "score": 9800,
+      "trials": 16,
+      "wins": 3,
+      "withContinue": 11,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 28,
+      "moves": 19,
+      "score": 10350,
+      "trials": 16,
+      "wins": 2,
+      "withContinue": 9,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 29,
+      "moves": 20,
+      "score": 10900,
+      "trials": 16,
+      "wins": 10,
+      "withContinue": 13,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 30,
+      "moves": 22,
+      "score": 11450,
+      "trials": 16,
+      "wins": 1,
+      "withContinue": 6,
+      "unassistedWitness": true
+    }
+  ]
+}

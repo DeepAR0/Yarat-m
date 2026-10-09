@@ -1,0 +1,27 @@
+.mystery-card,.mystery-journal { margin:16px 0; padding:18px; border:1px solid #d6e9df; border-radius:22px; background:linear-gradient(125deg,#ffffffec,#edf9f2); box-shadow:0 6px 24px #8dc6ac12,inset 0 1px 0 #fff; }
+.mystery-card .eyebrow { display:flex;align-items:center;gap:7px; }
+.mystery-card h2 { font-size:21px;line-height:1.25;margin:9px 0; }
+.mystery-card p,.journal-note,.journal-entry p,.result-discovery p { color:#50685e;font-size:13px;line-height:1.65;margin:8px 0; }
+.restoration { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:15px 0; }
+.restoration small { display:block;font-size:10px;color:#50685e;margin-top:7px; }
+.restoration-lights { display:grid;grid-template-columns:repeat(5,1fr);gap:4px; }
+.restoration-lights span { aspect-ratio:1;border-radius:4px;background:#dae4df; }
+.restoration-lights .lit { background:linear-gradient(135deg,#e6ffac,#77cfad);box-shadow:0 0 8px #a1e2b870; }
+.journal-entry { border-top:1px solid #dbe8e1;padding:9px 0; }
+.journal-entry summary { display:flex;gap:8px;align-items:center;min-height:40px;cursor:pointer;color:#285847;font-size:13px;font-weight:650; }
+.journal-entry summary small { margin-left:auto;font-size:10px;white-space:nowrap;font-weight:400; }
+.journal-entry summary:focus-visible { outline:2px solid #2b805e;outline-offset:3px;border-radius:4px; }
+.journal-entry summary::after { content:'+';margin-left:auto; }
+.journal-entry[open] summary::after { content:'−'; }
+.finale-entry { margin-top:12px;padding:10px;border-radius:12px;background:#f5f8ec; }
+.finale-entry.unlocked { background:#e7f5d8; }
+.gem-styles { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px; }
+.gem-style { display:flex;flex-direction:column;gap:7px;padding:12px;border:1px solid #d6e9df;border-radius:16px;background:#fff9;text-align:left;color:#285847; }
+.gem-style.selected { border:2px solid #65b38e;padding:11px;background:#effaf3; }
+.gem-style:disabled { opacity:.65;cursor:default; }
+.gem-style small { font-size:11px;line-height:1.4; }
+.gem-style>span:last-child { font-size:11px;line-height:1.4; }
+.style-samples { display:flex;align-items:center;justify-content:center;width:100%; }
+.style-samples img { width:20%;height:auto;min-width:0;object-fit:contain; }
+.result-discovery { text-align:left;padding:12px 14px;border:1px solid #d6e9df;border-radius:14px;background:#eff9f3;margin:12px 0; }
+.result-discovery strong { font-size:15px;color:#285847; }
