@@ -6,7 +6,7 @@ import witnesses from './fixtures/campaign-witnesses.json';
 import type { Coord } from '../src/utils/boardEngine';
 
 test('every non-tutorial stage has a real unassisted winning route on its witnessed starting seed',()=>{
-  assert.equal(witnesses.length,25);
+  assert.equal(witnesses.length,STAGES.length-5);
   for(const witness of witnesses){
     let session=createSession('classic',witness.stageId,new Date('2026-10-08T12:00:00Z'),{seed:witness.seed,teachingLayout:false});
     for(const action of witness.actions){

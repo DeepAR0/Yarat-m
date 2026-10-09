@@ -387,7 +387,7 @@ export default function App() {
 
   if (!ready || !session) return <div className="loading-screen"><Diamond size={44} /><h1>Gemblast Saga</h1><p role="status">Çekirdekler uyanıyor…</p></div>;
 
-  return <div data-realm={Math.min(2, Math.floor(((page === 'game' && session.mode === 'classic' ? session.stageId : unlocked) - 1) / 10))} className={`app ${page === 'game' ? 'is-playing' : ''} ${profile.settings.reducedMotion ? 'reduce-motion' : ''}`}>
+  return <div data-realm={Math.min(5, Math.floor(((page === 'game' && session.mode === 'classic' ? session.stageId : unlocked) - 1) / 10))} className={`app ${page === 'game' ? 'is-playing' : ''} ${profile.settings.reducedMotion ? 'reduce-motion' : ''}`}>
     <a className="skip-link" href="#main">İçeriğe geç</a>
     <header className="app-header">
       <button className="brand" data-home onClick={() => goPage('journey')} aria-label="Gemblast Saga, ana ekran"><span className="brand-mark"><img src={PRISM_DEFINITIONS.coral.artwork} width="44" height="44" alt=""/></span><span>GEMBLAST<small>S A G A</small></span></button>
@@ -445,8 +445,8 @@ export default function App() {
               const fall = presentation?.phase === 'falling' ? presentation.falls[cell.id] : undefined;
               const clearing = presentation?.phase === 'clearing' && presentation.cleared.has(`${r},${c}`);
               const loopHighlight = !selected && affected.has(`${r},${c}`);
-              return <button key={`${r},${c}`} data-cell-coord={`${r},${c}`} className={`gem-cell ${selected || loopHighlight ? 'selected' : ''} ${hinted ? 'hinted' : ''} ${cell.locked ? 'frozen' : ''} ${lessonIndex >= 0 && lesson ? 'lesson-stone' : ''} ${lessonIndex >= 0 && lesson && lessonNext ? 'lesson-next' : ''}`} style={{ '--gem-color': def.hex, '--gem-light': def.secondaryHex } as React.CSSProperties}
-                aria-label={`${lesson && lessonIndex >= 0 ? `Alıştırma ${lessonIndex + 1}, ` : hinted ? `İpucu ${hintIndex + 1}, ` : ''}${def.name}, ${def.symbol} simgesi, satır ${r + 1}, sütun ${c + 1}${cell.locked ? ', mühürlü' : ''}${cell.special !== 'none' ? cell.special === 'nova_3x3' ? ', rezonans çekirdeği' : ', ışık kanalı' : ''}${cell.multiplier > 1 ? `, ${cell.multiplier} kat puan` : ''}`} aria-pressed={selected} aria-disabled={cell.locked || gameLocked}
+              return <button key={`${r},${c}`} data-cell-coord={`${r},${c}`} className={`gem-cell ${selected || loopHighlight ? 'selected' : ''} ${hinted ? 'hinted' : ''} ${cell.locked ? 'frozen' : ''} ${cell.armor ? 'shelled' : ''} ${lessonIndex >= 0 && lesson ? 'lesson-stone' : ''} ${lessonIndex >= 0 && lesson && lessonNext ? 'lesson-next' : ''}`} style={{ '--gem-color': def.hex, '--gem-light': def.secondaryHex } as React.CSSProperties}
+                aria-label={`${lesson && lessonIndex >= 0 ? `Alıştırma ${lessonIndex + 1}, ` : hinted ? `İpucu ${hintIndex + 1}, ` : ''}${def.name}, ${def.symbol} simgesi, satır ${r + 1}, sütun ${c + 1}${cell.locked ? cell.armor ? ', kristal kabuklu mühür' : ', mühürlü' : ''}${cell.special !== 'none' ? cell.special === 'nova_3x3' ? ', rezonans çekirdeği' : ', ışık kanalı' : ''}${cell.multiplier > 1 ? `, ${cell.multiplier} kat puan` : ''}`} aria-pressed={selected} aria-disabled={cell.locked || gameLocked}
                 onPointerDown={event => {
                   if (aiming) { if (event.button === 0 && !gameLocked && !cell.locked) { event.preventDefault(); fireBooster(aiming, [r, c]); } return; }
                   if (tapMode || event.button !== 0 || gameLocked || cell.locked || resolvingRef.current || pointerRef.current !== null) return;

@@ -71,8 +71,11 @@ function run(stageId:number,seed:number,strategySeed:number) {
   return {baseWon,continuedWon,actions,movesUsed:actions.filter(a=>'path' in a).length};
 }
 const count=Number(process.argv[2]??8);
+// Optional stage range ("31-60") probes part of the campaign without rewriting the fixtures.
+const [from,to]=(process.argv[3]??'').split('-').map(Number);
+const partial=Number.isFinite(from)&&Number.isFinite(to);
 const results=[];const witnesses=[];
-for(const stage of STAGES.slice(5)) {
+for(const stage of STAGES.slice(5).filter(s=>!partial||(s.id>=from&&s.id<=to))) {
   let wins=0,continued=0,witness;
   for(let i=0;i<count;i++){
     const seed=(stage.id*1009+i*9176)>>>0;
@@ -89,6 +92,8 @@ for(const stage of STAGES.slice(5)) {
   const row={stageId:stage.id,moves:stage.moves,score:stage.targetScore,trials:count,wins,withContinue:continued,unassistedWitness:!!witness};
   results.push(row);console.log(JSON.stringify(row));
 }
+if(!partial){
 await writeFile('release/balance-probe.json',JSON.stringify({method:'Bounded greedy heuristic; not human win rates. Fixed seeds; no gameplay adaptation.',results},null,2)+'\n');
 await writeFile('tests/fixtures/campaign-witnesses.json',JSON.stringify(witnesses,null,2)+'\n');
-if(witnesses.length!==25)process.exitCode=1;
+if(witnesses.length!==STAGES.length-5)process.exitCode=1;
+}

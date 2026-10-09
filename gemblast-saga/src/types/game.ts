@@ -31,6 +31,7 @@ export interface CellData {
   multiplier: 1 | 2 | 3; // 2x or 3x Prism Core
   special: SpecialPower; // Line Laser ('pulse_row' | 'pulse_col') or 3x3 Nova ('nova_3x3')
   locked: boolean; // Frosted Crystal tile that unlocks when an adjacent path clears
+  armor?: 1; // Crystal shell on a seal: the first adjacent clear cracks the shell, the next opens the seal
   isNew?: boolean;
 }
 
@@ -55,6 +56,7 @@ export interface StageConfig {
   targetScore: number;
   quotas: TargetQuota[];
   lockedCoords: [number, number][];
+  armoredCoords?: [number, number][];
   isDaily?: boolean;
   seed?: number;
   loopsTarget?: number;
@@ -147,7 +149,8 @@ export const PRISM_DEFINITIONS: Record<PrismColor, PrismDefinition> = {
   }
 };
 
-export const CHAPTERS = ['Köz Vadisi', 'Gelgit Uçurumu', 'Eter Zirvesi'];
+export const CHAPTERS = ['Köz Vadisi', 'Gelgit Uçurumu', 'Eter Zirvesi', 'Sis Ormanı', 'Kristal Mağaralar', 'Gök Adaları'];
+export const ACT_ONE_STAGES = 30;
 
 // Ten authored encounter patterns introduce one decision at a time.
 const ENCOUNTERS: Omit<StageConfig, 'id'>[] = [
@@ -181,7 +184,7 @@ const CAMPAIGN_MOVES = [
   [14,14,15,15,16,15,16,16,17,16],
   [16,16,17,17,18,17,19,19,20,22],
 ];
-export const STAGES: StageConfig[] = LEGACY_STAGES.map((legacy,index) => {
+const ACT_ONE: StageConfig[] = LEGACY_STAGES.map((legacy,index) => {
   if(index<5) return {...legacy};
   const chapter=Math.floor(index/10), position=index%10;
   const quotaBoost=chapter===0 ? 4 : chapter===1 ? 14 : 26;
@@ -201,6 +204,33 @@ export const STAGES: StageConfig[] = LEGACY_STAGES.map((legacy,index) => {
     lesson: chapter===0 ? base.lesson : boss ? 'Halka, güç ve mühür hedeflerini birlikte tamamla. Hamlelerini planla.' : 'Uzun zincirlerle güç oluştur. Hedef renkleri ve mühürleri birlikte düşün.',
   };
 });
+
+// Act II: three realms past the tower. Crystal shells (two-strike seals) arrive; boosters help balance the curve.
+const ACT_TWO_NAMES = [
+  ['Sisin Eşiği','Fısıldayan Dallar','Kayıp Patika','Sis Halkası','Kök Işığı','Kabuklu Kapı','Yankılanan Koru','İkiz Sis','Ağaç Halkaları','Ormanın Kalbi'],
+  ['Mağara Ağzı','Kabuk Damarı','Yankı Odası','Kristal Halka','Derin Nova','Mühürlü Galeri','Zincir Damlası','Ayna Geçit','Çifte Yankı','Mağaranın Kalbi'],
+  ['Rüzgâr Köprüsü','Yüzen Bahçe','Bulut Yolu','Gök Halkası','Yıldız Tohumu','Kabuklu Ada','Fırtına Zinciri','İkiz Ada','Göğün Halkaları','İlk Kule'],
+];
+// Per realm: [moves bonus, score base, score step, quota boost, extra seals, which seals carry a crystal shell]
+const ACT_TWO_TUNING: { moves: number[]; score: number; step: number; quota: number; seals: [number,number][]; armor: 'extra' | 'all' }[] = [
+  { moves:[16,16,17,17,18,17,18,18,19,21], score:5200, step:420, quota:20, seals:[[1,1],[4,4]], armor:'extra' },
+  { moves:[17,17,18,18,19,18,20,20,21,23], score:6400, step:480, quota:24, seals:[[1,1],[1,4],[4,1],[4,4]], armor:'extra' },
+  { moves:[18,18,19,19,20,20,21,21,22,24], score:7600, step:540, quota:28, seals:[[1,1],[1,4],[4,1],[4,4]], armor:'all' },
+];
+const ACT_TWO: StageConfig[] = ACT_TWO_TUNING.flatMap((tune,realm) => ENCOUNTERS.map((base,position):StageConfig => {
+  const id = ACT_ONE_STAGES + realm*10 + position + 1, boss = position===9;
+  const lockedCoords = [...base.lockedCoords.map(([r,c]):[number,number]=>[r,c]), ...tune.seals].sort(([ar,ac],[br,bc])=>ar-br||ac-bc);
+  const armoredCoords = (tune.armor==='all' ? lockedCoords : tune.seals).map(([r,c]):[number,number]=>[r,c]);
+  const second = PRISM_COLORS[(PRISM_COLORS.indexOf(base.quotas[0].color)+2+realm)%PRISM_COLORS.length];
+  return { id, title: ACT_TWO_NAMES[realm][position], moves: tune.moves[position], targetScore: tune.score + position*tune.step,
+    quotas: [...base.quotas.map(q=>({...q,target:q.target+tune.quota+(boss?6:0)})), ...(base.quotas.length===1 ? [{color:second,target:tune.quota}] : [])],
+    lockedCoords, armoredCoords, sealsTarget: lockedCoords.length, specialsTarget: 1+realm+(boss?1:0),
+    ...(boss ? {loopsTarget:2+realm} : base.loopsTarget ? {loopsTarget:base.loopsTarget+1} : base.requireLoop ? {loopsTarget:1} : {}),
+    seed: 4000 + id*17,
+    lesson: realm===0 && position===0 ? 'Kristal kabuklu mühürler iki darbe ister: önce kabuk çatlar, sonraki hamlede mühür açılır.'
+      : boss ? 'Halka, güç ve kabuklu mühürleri birlikte çöz. Gerekirse güçlendiricilerini kullan.' : 'Kabukları erken çatlat; uzun zincirlerle güç biriktir.' };
+}));
+export const STAGES: StageConfig[] = [...ACT_ONE, ...ACT_TWO];
 
 export function localDateKey(now = new Date()): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;

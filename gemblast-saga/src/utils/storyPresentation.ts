@@ -14,6 +14,16 @@ const storyScenes: {scene:SceneKind; cues:StoryRecord['cues']}[] = [
   {scene:'memory',cues:['Son mühür çözüldü.','Kayıt bir isim gösterdi.','Mira.']},
   {scene:'ring',cues:['Üç diyarın yolu birleşti.','Işık bir halka çizdi.','Eksik olan yalnızca ritim.']},
   {scene:'gate',cues:['Kuleye giden yol açıldı.','Kapının ardında biri var.','Yedi yankı onu özgür bırakabilir.']},
+  {scene:'signal',cues:['Sisin ortasında bir ışık.','Mira onu yakmadı.','Kim yaktı?']},
+  {scene:'trail',cues:['Kabuklarda işaretler…','Senin çizdiğin gibi.','Biri buradan geçmiş.']},
+  {scene:'memory',cues:['Kabuk çatladı.','Altında bir sayfa.','“Döngü yine başladı.”']},
+  {scene:'trail',cues:['Sis çekildi.','Aynı ayak izleri.','Ama buradan başlıyorlar.']},
+  {scene:'tide',cues:['Mağara her sesi geri verir.','Bir ses farklı.','“Bu sefer unutma.”']},
+  {scene:'constellation',cues:['Kristal duvarda yansıman.','Senden önce kıpırdadı.','Gökyüzünü gösteriyor.']},
+  {scene:'memory',cues:['Mağaranın kalbi atıyor.','Mira’dan önce bir bekçi vardı.','Hafızasını vermiş.']},
+  {scene:'signal',cues:['Rüzgâr adlar fısıldıyor.','Listenin sonu boş.','Bir ad silinmiş.']},
+  {scene:'ring',cues:['Yarım kalmış bir halka.','Senin taşından başlıyor.','“Buraya daha önce geldin.”']},
+  {scene:'finale',cues:['Halka tamamlandı.','Hatırladın.','Döngü kırıldı.']},
 ];
 export const PROLOGUE: StoryRecord = {id:'prologue',title:'Kulenin çağrısı',text:'Diyarlar karanlığa gömüldü. Ama kapalı kulenin tepesinde bir ışık yanıyor. Çekirdekleri bağlayarak yolu onar ve sinyalin kaynağını keşfet.',scene:'signal',cues:['Bütün diyarlar sustu.','Kule hâlâ parlıyor.','Sinyalin kaynağını bul.']};
 export const FINALE: StoryRecord = {id:'finale',title:'Son Uyanış',text:ENDING,scene:'finale',cues:['Yedi yankı aynı ritimde.','Işık üç diyarda dolaşıyor.','Kulenin kapısı açıldı.']};

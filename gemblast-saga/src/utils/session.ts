@@ -40,7 +40,7 @@ export interface Profile {
   tutorialSeen: boolean;
   loopTutorialSeen?: boolean;
   mysteryDays?: string[];
-  gemStyle?: 'motif' | 'element';
+  gemStyle?: 'motif' | 'element' | 'airy';
   meta?: MetaState;
 }
 export const emptyCounts = () => Object.fromEntries(PRISM_COLORS.map(c => [c, 0])) as Record<PrismColor, number>;
@@ -54,7 +54,7 @@ export function stageFor(session: Session): StageConfig {
 export function createSession(mode: GameMode, stageId = 1, date = new Date(), options: { seed?: number; teachingLayout?: boolean } = {}): Session {
   const stage = mode === 'daily' ? getDailyStageConfig(date) : STAGES[stageId - 1] ?? STAGES[0];
   const rng = createRNG(mode === 'daily' ? stage.seed : options.seed ?? (mode === 'zen' ? undefined : stage.seed));
-  const grid = createGrid(mode === 'zen' ? [] : stage.lockedCoords, rng);
+  const grid = createGrid(mode === 'zen' ? [] : stage.lockedCoords, rng, mode === 'zen' ? [] : stage.armoredCoords);
   const teachingLayout = options.teachingLayout !== false;
   if (mode === 'classic' && teachingLayout && stage.id <= 5) {
     if (stage.id === 1) { for (let c = 1; c <= 3; c++) { grid[2][c].color = 'coral'; grid[4][c].color = 'cobalt'; } }
@@ -216,7 +216,8 @@ export function validateSession(value: unknown, mode: GameMode): value is Sessio
   return Array.isArray(value.grid) && value.grid.length === 6 && value.grid.every(row =>
     Array.isArray(row) && row.length === 6 && row.every(cell => {
       if (!isRecord(cell) || typeof cell.id !== 'string' || ids.has(cell.id) || !PRISM_COLORS.includes(cell.color as PrismColor) ||
-        ![1, 2, 3].includes(Number(cell.multiplier)) || !['none', 'pulse_row', 'pulse_col', 'nova_3x3'].includes(String(cell.special)) || typeof cell.locked !== 'boolean') return false;
+        ![1, 2, 3].includes(Number(cell.multiplier)) || !['none', 'pulse_row', 'pulse_col', 'nova_3x3'].includes(String(cell.special)) || typeof cell.locked !== 'boolean' ||
+        (cell.armor !== undefined && (cell.armor !== 1 || !cell.locked))) return false;
       ids.add(cell.id); return true;
     }));
 }
@@ -236,6 +237,7 @@ export function parseProfile(text: string | null): Profile {
     if (Array.isArray(raw.dailyWins)) profile.dailyWins = raw.dailyWins.filter(dateKey).slice(-366);
     profile.mysteryDays = [...new Set(Array.isArray(raw.mysteryDays) ? raw.mysteryDays.filter(dateKey) : profile.dailyWins)].slice(0, 7);
     if (raw.gemStyle === 'element' && Array.from({length:6}, (_, i) => profile.stages[i+1]?.stars).every(Boolean)) profile.gemStyle = 'element';
+    if (raw.gemStyle === 'airy' && Array.from({length:40}, (_, i) => profile.stages[i+1]?.stars).every(Boolean)) profile.gemStyle = 'airy';
     if (isRecord(raw.dailyBest)) for (const [key, value] of Object.entries(raw.dailyBest)) if (dateKey(key) && count(value)) profile.dailyBest[key] = value;
     if (count(raw.zenBest)) profile.zenBest = raw.zenBest;
     profile.meta = parseMeta(raw.meta);

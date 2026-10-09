@@ -90,3 +90,22 @@
 .streak-warning { margin:-8px 0 16px;font-size:12px;color:#ffc2a6; }
 .reduce-motion .reward-banner, .reduce-motion .chest-visual, .reduce-motion .booster-aim, .reduce-motion .result-rewards>* { animation:none; }
 @media (prefers-reduced-motion: reduce) { .reward-banner, .chest-visual, .booster-aim, .result-rewards>*, .chest-reveal *, .chest-loot li { animation:none !important; } }
+
+/* Act II realms */
+[data-realm="3"] { --world-accent:#9fe3bf;--world-glow:#6fd3a833;--world-edge:#4f8a72;--rim-mid:#3c6a5a;--tray:#1a3d38;--recess:#153330; }
+[data-realm="4"] { --world-accent:#ffd58a;--world-glow:#e8b45e33;--world-edge:#9a7a4a;--rim-mid:#62553f;--tray:#33312c;--recess:#28261f; }
+[data-realm="5"] { --world-accent:#bfe8ff;--world-glow:#8fd0f533;--world-edge:#5f8aa5;--rim-mid:#45657a;--tray:#1d3a4f;--recess:#173045; }
+.map-realm-3 { --map-land-top:#1f4a40;--map-land-bottom:#18332f;--map-ridge:#6a9e86;--map-rock:#2b4e46;--map-glow:#9fe3bf;--map-node-top:#2f6a55;--map-node-bottom:#1d4138;border-radius:25px 25px 0 0;background:#1b3b35;border-color:#5d8c78;margin-top:18px; }
+.map-realm-4 { --map-land-top:#3a3433;--map-land-bottom:#2a2529;--map-ridge:#9a8a6a;--map-rock:#4a4250;--map-glow:#ffd58a;--map-node-top:#6a5638;--map-node-bottom:#3f3427;border-radius:0;background:#2b272b;border-color:#8b7b5c; }
+.map-realm-5 { --map-land-top:#2b5068;--map-land-bottom:#203f56;--map-ridge:#86b4cf;--map-rock:#3a5a6e;--map-glow:#bfe8ff;--map-node-top:#3f6f8c;--map-node-bottom:#284a62;border-radius:0 0 25px 25px;border-bottom:1px solid #86b4cf;background:#22445b;border-color:#86b4cf; }
+.act-two-banner { margin:18px 0 0;padding:14px 16px;border:1px solid #5d8c78;border-radius:20px;background:linear-gradient(135deg,#1f4a40,#2b3e55);text-align:center; }
+.act-two-banner h2 { color:#c9f5dd;font-size:18px;margin:4px 0; } .act-two-banner p { color:var(--muted);font-size:12px;margin:0; }
+
+/* Crystal shell: a faceted second layer over the seal; it cracks away on the first strike. */
+.shell-mark { position:absolute;inset:4%;border-radius:22%;background:linear-gradient(135deg,#e6f6ff66,#9fd6ff22 40%,#ffffff55 55%,#7fb8e822);border:2px solid #cdeeff;box-shadow:inset 0 0 12px #e6f6ffaa,0 0 10px #9fd6ff66;clip-path:polygon(50% 0,100% 30%,100% 70%,50% 100%,0 70%,0 30%);pointer-events:none; }
+.gem-cell.shelled { box-shadow:inset 0 0 0 2px #9fd6ff88; }
+.map-compass>div { min-width:0;overflow-x:auto;scrollbar-width:none; } .map-compass>div::-webkit-scrollbar { display:none; }
+.map-compass>div button { flex:none;padding:4px 8px; }
+.map-compass>button { flex:none; }
+.shell-mark { inset:2%;border-width:2.5px;background:linear-gradient(135deg,#f2fbffaa,#a9dcff44 40%,#ffffff88 52%,#7fb8e844);box-shadow:inset 0 0 14px #f2fbff,0 0 12px #9fd6ffaa; }
+.core-gem.shelled::after { content:'2';position:absolute;right:4%;top:4%;z-index:4;display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#2f6c96;border:1px solid #cdeeff;color:#fff;font-size:10px;font-weight:800; }

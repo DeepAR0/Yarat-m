@@ -225,6 +225,276 @@
       "wins": 1,
       "withContinue": 6,
       "unassistedWitness": true
+    },
+    {
+      "stageId": 31,
+      "moves": 16,
+      "score": 5200,
+      "trials": 16,
+      "wins": 14,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 32,
+      "moves": 16,
+      "score": 5620,
+      "trials": 16,
+      "wins": 9,
+      "withContinue": 15,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 33,
+      "moves": 17,
+      "score": 6040,
+      "trials": 16,
+      "wins": 13,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 34,
+      "moves": 17,
+      "score": 6460,
+      "trials": 16,
+      "wins": 16,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 35,
+      "moves": 18,
+      "score": 6880,
+      "trials": 16,
+      "wins": 13,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 36,
+      "moves": 17,
+      "score": 7300,
+      "trials": 16,
+      "wins": 9,
+      "withContinue": 13,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 37,
+      "moves": 18,
+      "score": 7720,
+      "trials": 16,
+      "wins": 10,
+      "withContinue": 15,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 38,
+      "moves": 18,
+      "score": 8140,
+      "trials": 16,
+      "wins": 5,
+      "withContinue": 12,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 39,
+      "moves": 19,
+      "score": 8560,
+      "trials": 16,
+      "wins": 12,
+      "withContinue": 15,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 40,
+      "moves": 21,
+      "score": 8980,
+      "trials": 16,
+      "wins": 6,
+      "withContinue": 14,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 41,
+      "moves": 17,
+      "score": 6400,
+      "trials": 16,
+      "wins": 8,
+      "withContinue": 15,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 42,
+      "moves": 17,
+      "score": 6880,
+      "trials": 16,
+      "wins": 7,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 43,
+      "moves": 18,
+      "score": 7360,
+      "trials": 16,
+      "wins": 7,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 44,
+      "moves": 18,
+      "score": 7840,
+      "trials": 16,
+      "wins": 13,
+      "withContinue": 16,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 45,
+      "moves": 19,
+      "score": 8320,
+      "trials": 16,
+      "wins": 10,
+      "withContinue": 15,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 46,
+      "moves": 18,
+      "score": 8800,
+      "trials": 16,
+      "wins": 5,
+      "withContinue": 15,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 47,
+      "moves": 20,
+      "score": 9280,
+      "trials": 16,
+      "wins": 7,
+      "withContinue": 12,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 48,
+      "moves": 20,
+      "score": 9760,
+      "trials": 16,
+      "wins": 4,
+      "withContinue": 12,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 49,
+      "moves": 21,
+      "score": 10240,
+      "trials": 16,
+      "wins": 10,
+      "withContinue": 15,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 50,
+      "moves": 23,
+      "score": 10720,
+      "trials": 16,
+      "wins": 4,
+      "withContinue": 11,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 51,
+      "moves": 18,
+      "score": 7600,
+      "trials": 16,
+      "wins": 5,
+      "withContinue": 12,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 52,
+      "moves": 18,
+      "score": 8140,
+      "trials": 16,
+      "wins": 4,
+      "withContinue": 14,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 53,
+      "moves": 19,
+      "score": 8680,
+      "trials": 16,
+      "wins": 10,
+      "withContinue": 14,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 54,
+      "moves": 19,
+      "score": 9220,
+      "trials": 16,
+      "wins": 11,
+      "withContinue": 15,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 55,
+      "moves": 20,
+      "score": 9760,
+      "trials": 16,
+      "wins": 7,
+      "withContinue": 13,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 56,
+      "moves": 20,
+      "score": 10300,
+      "trials": 16,
+      "wins": 7,
+      "withContinue": 12,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 57,
+      "moves": 21,
+      "score": 10840,
+      "trials": 16,
+      "wins": 6,
+      "withContinue": 13,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 58,
+      "moves": 21,
+      "score": 11380,
+      "trials": 16,
+      "wins": 2,
+      "withContinue": 11,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 59,
+      "moves": 22,
+      "score": 11920,
+      "trials": 16,
+      "wins": 3,
+      "withContinue": 14,
+      "unassistedWitness": true
+    },
+    {
+      "stageId": 60,
+      "moves": 24,
+      "score": 12460,
+      "trials": 16,
+      "wins": 3,
+      "withContinue": 11,
+      "unassistedWitness": true
     }
   ]
 }

@@ -26,11 +26,16 @@ function newCell(rng: () => number): CellData {
   return { id: nextId(), color: pickColor(rng), multiplier: 1, special: 'none', locked: false, isNew: true };
 }
 
-export function createGrid(lockedCoords: Coord[], seedOrRng?: number | (() => number)): CellData[][] {
+export function createGrid(lockedCoords: Coord[], seedOrRng?: number | (() => number), armoredCoords: Coord[] = []): CellData[][] {
   const rng = typeof seedOrRng === 'function' ? seedOrRng : createRNG(seedOrRng);
   const locked = new Set(lockedCoords.map(([r, c]) => `${r},${c}`));
+  const armored = new Set(armoredCoords.map(([r, c]) => `${r},${c}`));
   const grid = Array.from({ length: BOARD_SIZE }, (_, r) =>
-    Array.from({ length: BOARD_SIZE }, (_, c) => ({ ...newCell(rng), locked: locked.has(`${r},${c}`) })));
+    Array.from({ length: BOARD_SIZE }, (_, c): CellData => {
+      const cell: CellData = { ...newCell(rng), locked: locked.has(`${r},${c}`) };
+      if (cell.locked && armored.has(`${r},${c}`)) cell.armor = 1;
+      return cell;
+    }));
   return ensurePlayable(grid, rng);
 }
 
@@ -196,6 +201,21 @@ function expandSpecials(grid: CellData[][], cleared: Set<string>): number {
   return triggeredSpecialsCount;
 }
 
+/**
+ * Strikes the seals beside a cleared stone. Each seal takes at most one strike per move:
+ * a shelled seal loses its shell, a plain seal opens. Returns how many seals opened.
+ */
+function hitSeals(grid: CellData[][], r: number, c: number, hit: Set<string>): number {
+  let opened = 0;
+  for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+    const cell = grid[r + dr]?.[c + dc], key = `${r + dr},${c + dc}`;
+    if (!cell?.locked || hit.has(key)) continue;
+    hit.add(key);
+    if (cell.armor) delete cell.armor; else { cell.locked = false; opened++; }
+  }
+  return opened;
+}
+
 /** Booster blast: clears the given open stones (plus any powers they reach), opens adjacent seals and refills. */
 export function blastCells(grid: CellData[][], seeds: Coord[], rng: () => number) {
   const cleared = new Set(seeds.filter(([r, c]) => grid[r]?.[c] && !grid[r][c].locked).map(([r, c]) => `${r},${c}`));
@@ -205,12 +225,11 @@ export function blastCells(grid: CellData[][], seeds: Coord[], rng: () => number
   const colorCounts = Object.fromEntries(PRISM_COLORS.map(color => [color, 0])) as Record<PrismColor, number>;
   const next: CellData[][] = grid.map(row => row.map(cell => ({ ...cell, isNew: false })));
   let unlockedCount = 0, totalMultiplier = 1;
+  const hit = new Set<string>();
   for (const [r, c] of clearedCoords) {
     colorCounts[grid[r][c].color]++;
     totalMultiplier = Math.min(27, totalMultiplier * grid[r][c].multiplier);
-    for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
-      if (next[r + dr]?.[c + dc]?.locked) { next[r + dr][c + dc].locked = false; unlockedCount++; }
-    }
+    unlockedCount += hitSeals(next, r, c, hit);
   }
   const filled = refillGrid(next, cleared, 'down', rng);
   return { nextGrid: ensurePlayable(filled, rng), clearedCoords, clearedCount: cleared.size, colorCounts, totalMultiplier, unlockedCount, triggeredSpecialsCount };
@@ -225,13 +244,12 @@ export function resolvePathOnGrid(grid: CellData[][], path: Coord[], isClosedLoo
   const colorCounts = Object.fromEntries(PRISM_COLORS.map(color => [color, 0])) as Record<PrismColor, number>;
   const next: CellData[][] = grid.map(row => row.map(cell => ({ ...cell, isNew: false })));
   let unlockedCount = 0, totalMultiplier = 1;
+  const hit = new Set<string>();
   for (const [r, c] of clearedCoords) {
     colorCounts[grid[r][c].color]++;
     // Cap chain multipliers so a large special chain remains a finite, readable score.
     totalMultiplier = Math.min(27, totalMultiplier * grid[r][c].multiplier);
-    for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
-      if (next[r + dr]?.[c + dc]?.locked) { next[r + dr][c + dc].locked = false; unlockedCount++; }
-    }
+    unlockedCount += hitSeals(next, r, c, hit);
   }
   let spawnedPower: SpecialPower = 'none';
   let spawnedMultiplier: 1 | 2 | 3 = 1;

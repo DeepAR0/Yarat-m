@@ -6,7 +6,7 @@ import { CrystalArt } from './CrystalArt';
 import { Emblem } from './Emblem';
 
 export function WorldHub({ stage, profile, onPlay }: {stage:StageConfig;profile:Profile;onPlay:()=>void}) {
-  const realm=Math.min(2,Math.floor((stage.id-1)/10)), mystery=mysteryProgress(profile);
+  const realm=Math.min(CHAPTERS.length-1,Math.floor((stage.id-1)/10)), mystery=mysteryProgress(profile);
   const stars=profile.stages[stage.id]?.stars??0;
   const resume=profile.sessions.classic?.outcome==='playing' && profile.sessions.classic.turns>0;
   return <section className={`world-hub world-hub-${realm}`} aria-label="Macera diyarın">
