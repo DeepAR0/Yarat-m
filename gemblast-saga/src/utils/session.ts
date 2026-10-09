@@ -1,4 +1,4 @@
-import { CellData, FlowDirection, FLOW_DIRECTIONS, GameMode, localDateKey, getDailyStageConfig, PRISM_COLORS, PrismColor, StageConfig, STAGES, LEGACY_STAGES } from '../types/game';
+import { CellData, FlowDirection, FLOW_DIRECTIONS, GameMode, localDateKey, getDailyStageConfig, PRISM_COLORS, PRISM_DEFINITIONS, PrismColor, StageConfig, STAGES, LEGACY_STAGES } from '../types/game';
 import { blastCells, Coord, createGrid, createRNG, ensurePlayable, flowForPath, isValidPath, resolvePathOnGrid, shuffleGrid } from './boardEngine';
 import { type CompetitionTrace, validTrace, leagueDay } from './competition';
 import { emptyMeta, parseMeta, type MetaState } from './meta';
@@ -270,4 +270,27 @@ export function applyStreakBonus(session: Session, streak: number): Session {
     grid[r][c] = { ...grid[r][c], special: power, multiplier: power === 'nova_3x3' ? 3 : 1 };
   }
   return { ...session, grid, rngState: rng.getState(), streakBonus: tier };
+}
+
+/** What still stands between a finished attempt and a win, in player words. Drives the "so close" loss screen. */
+export function missingGoals(session: Session): string[] {
+  if (session.mode === 'zen') return [];
+  const stage = stageFor(session), missing: string[] = [];
+  if (session.score < stage.targetScore) missing.push(`${(stage.targetScore - session.score).toLocaleString('tr-TR')} puan`);
+  for (const q of stage.quotas) if (session.collected[q.color] < q.target) missing.push(`${q.target - session.collected[q.color]} ${PRISM_DEFINITIONS[q.color].name} taşı`);
+  const loops = (stage.loopsTarget ?? (stage.requireLoop ? 1 : 0)) - session.loopsMade;
+  if (loops > 0) missing.push(`${loops} halka`);
+  const seals = (stage.sealsTarget ?? 0) - session.sealsOpened;
+  if (seals > 0) missing.push(`${seals} mühür`);
+  const specials = (stage.specialsTarget ?? 0) - session.specialsTriggered;
+  if (specials > 0) missing.push(`${specials} güç taşı patlatma`);
+  return missing;
+}
+/** A lost adventure attempt can go on with a +3 Moves booster (paid separately by the caller). */
+export function canContinueWithMoves(session: Session) {
+  return session.mode === 'classic' && session.outcome === 'lost' && session.movesLeft <= 0;
+}
+export function continueWithMoves(session: Session): Session {
+  if (!canContinueWithMoves(session)) return session;
+  return { ...session, movesLeft: 3, outcome: 'playing', boostersUsed: (session.boostersUsed ?? 0) + 1 };
 }

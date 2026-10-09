@@ -237,6 +237,62 @@ class SoundManager {
       osc.stop(now + idx * 0.12 + 0.3);
     });
   }
+
+  /** Bright arpeggio with a shimmer: claimed rewards and purchases. */
+  public playReward() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    [783.99, 987.77, 1174.66, 1567.98].forEach((freq, idx) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain(), at = now + idx * 0.06;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, at);
+      gain.gain.setValueAtTime(0.0001, at);
+      gain.gain.exponentialRampToValueAtTime(0.12, at + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, at + 0.45);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(at); osc.stop(at + 0.46);
+    });
+  }
+
+  /** Low thump, rising sweep, then a sparkle: a chest bursting open. */
+  public playChest() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const thump = ctx.createOscillator(), thumpGain = ctx.createGain();
+    thump.type = 'sine';
+    thump.frequency.setValueAtTime(140, now);
+    thump.frequency.exponentialRampToValueAtTime(55, now + 0.2);
+    thumpGain.gain.setValueAtTime(0.22, now);
+    thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    thump.connect(thumpGain); thumpGain.connect(ctx.destination);
+    thump.start(now); thump.stop(now + 0.23);
+    const sweep = ctx.createOscillator(), sweepGain = ctx.createGain();
+    sweep.type = 'triangle';
+    sweep.frequency.setValueAtTime(300, now + 0.12);
+    sweep.frequency.exponentialRampToValueAtTime(1400, now + 0.5);
+    sweepGain.gain.setValueAtTime(0.0001, now + 0.12);
+    sweepGain.gain.exponentialRampToValueAtTime(0.1, now + 0.2);
+    sweepGain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    sweep.connect(sweepGain); sweepGain.connect(ctx.destination);
+    sweep.start(now + 0.12); sweep.stop(now + 0.56);
+    setTimeout(() => this.playReward(), 380);
+  }
+
+  /** One soft chime per star as the result stars pop in. */
+  public playStar(index: number) {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = ctx.currentTime, freq = [880, 1108.73, 1318.51][index] ?? 1318.51;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, now);
+    gain.gain.setValueAtTime(0.13, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.41);
+  }
 }
 
 export const sound = new SoundManager();

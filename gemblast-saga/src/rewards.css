@@ -109,3 +109,32 @@
 .map-compass>button { flex:none; }
 .shell-mark { inset:2%;border-width:2.5px;background:linear-gradient(135deg,#f2fbffaa,#a9dcff44 40%,#ffffff88 52%,#7fb8e844);box-shadow:inset 0 0 14px #f2fbff,0 0 12px #9fd6ffaa; }
 .core-gem.shelled::after { content:'2';position:absolute;right:4%;top:4%;z-index:4;display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#2f6c96;border:1px solid #cdeeff;color:#fff;font-size:10px;font-weight:800; }
+
+/* Result: stars pop in one by one */
+.result-stars .star-rating svg { animation:star-pop .5s cubic-bezier(.2,1.8,.4,1) both; }
+.result-stars .star-rating svg:nth-child(1) { animation-delay:.42s; } .result-stars .star-rating svg:nth-child(2) { animation-delay:.68s; } .result-stars .star-rating svg:nth-child(3) { animation-delay:.94s; }
+.result-stars.still .star-rating svg { animation:none; }
+.result-stars { display:flex;justify-content:center;margin-bottom:20px; } .result-stars .star-rating { gap:12px; } .result-stars .star-rating svg { width:30px;height:30px; }
+@keyframes star-pop { 0% { transform:scale(0) rotate(-40deg);opacity:0; } 100% { transform:none;opacity:1; } }
+
+/* "So close" loss */
+.near-miss { margin:-6px 0 16px;padding:12px;border:1px dashed #c98a4a;border-radius:16px;background:#3a2f26;text-align:left; }
+.near-miss strong { display:block;color:#ffc58a;font-size:13px;margin-bottom:6px; }
+.near-miss ul { list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px; }
+.near-miss li { padding:4px 9px;border-radius:999px;background:#5a4330;color:#ffe2c4;font-size:11px;font-weight:700; }
+.moves-continue { display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;margin-bottom:10px;border-radius:16px 6px 16px 6px;background:linear-gradient(145deg,#cbb6ff,#8f74e8);color:#1d1440;font-size:14px;font-weight:800;box-shadow:0 4px 0 #4c3a8a;animation:loot-rise .5s .2s ease-out both; }
+.moves-continue b { padding:3px 8px;border-radius:9px;background:#1d144022;font-size:12px; }
+.moves-continue:disabled { opacity:.45; }
+
+/* Stage intro */
+.stage-intro { text-align:center; }
+.intro-moves { display:flex;flex-direction:column;align-items:center;margin:4px 0 14px; } .intro-moves strong { font-size:44px;color:#ffdf9c;line-height:1; } .intro-moves span { font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase; }
+.intro-goals { list-style:none;margin:0 0 14px;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:8px; }
+.intro-goals li { display:flex;flex-direction:column;align-items:center;gap:3px;min-width:64px;padding:10px 8px;border:1px solid #4f6d72;border-radius:14px 6px 14px 6px;background:#183543;color:#f5ce82;animation:loot-rise .4s ease-out both; }
+.intro-goals li:nth-child(2) { animation-delay:.08s; } .intro-goals li:nth-child(3) { animation-delay:.16s; } .intro-goals li:nth-child(4) { animation-delay:.24s; } .intro-goals li:nth-child(5) { animation-delay:.32s; }
+.intro-goals b { color:#fff2d6;font-size:16px; } .intro-goals small { color:var(--muted);font-size:10px; }
+.intro-gem { width:28px;height:28px;display:block; } .intro-gem .gem-art { width:100%;height:100%; }
+.intro-tip { font-size:12px;color:#bfe8ff;margin:0 0 12px; }
+.intro-streak { display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 14px;padding:9px;border:1px solid #c98a4a;border-radius:12px;background:#4a3324;color:#ffc58a;font-size:12px;font-weight:700; }
+.reduce-motion .intro-goals li, .reduce-motion .moves-continue { animation:none; }
+.booster { padding:6px 5px;gap:5px; } .booster span { white-space:nowrap; }

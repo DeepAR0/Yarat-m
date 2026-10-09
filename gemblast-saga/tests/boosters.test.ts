@@ -44,3 +44,22 @@ test('Win streaks seed fresh attempts with power stones exactly once', () => {
   assert.equal(applyStreakBonus(bonus, 5), bonus);
   assert.equal(applyStreakBonus(createSession('zen'), 3).streakBonus, undefined);
 });
+
+import { continueWithMoves, missingGoals } from '../src/utils/session';
+import { metaOf, restoreStreak, settleFinish } from '../src/utils/meta';
+import { STAGES } from '../src/types/game';
+
+test('A lost attempt lists what was missing and can continue with +3 moves, getting its win streak back', () => {
+  const lost = { ...createSession('classic', 34), outcome: 'lost' as const, movesLeft: 0, score: 100 };
+  const missing = missingGoals(lost);
+  assert.ok(missing.some(m => m.includes('puan')) && missing.some(m => m.includes('halka')) && missing.some(m => m.includes('mühür')));
+  assert.deepEqual(missingGoals(createSession('zen')), []);
+  const resumed = continueWithMoves(lost);
+  assert.equal(resumed.outcome, 'playing'); assert.equal(resumed.movesLeft, 3);
+  assert.equal(continueWithMoves(resumed), resumed);
+  let profile = defaultProfile(); profile = { ...profile, meta: { ...metaOf(profile), winStreak: 4 } };
+  const settled = settleFinish(profile, recordSession(profile, lost), lost);
+  assert.equal(metaOf(settled.profile).winStreak, 0); assert.equal(settled.summary.lostStreak, 4);
+  assert.equal(metaOf(restoreStreak(settled.profile, settled.summary.lostStreak)).winStreak, 4);
+  assert.ok(STAGES[33].loopsTarget);
+});

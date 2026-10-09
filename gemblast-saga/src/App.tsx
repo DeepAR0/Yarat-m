@@ -10,14 +10,14 @@ import { PrismGemArtwork } from './components/PrismGemArtwork';
 import { JourneyMap } from './components/JourneyMap';
 import { FlowIndicator } from './components/FlowIndicator';
 import { Dialog } from './components/Dialog';
-import { EraseDialog, GuideDialog, MoreDialog, PrivacyDialog, RestartDialog } from './components/GameDialogs';
+import { EraseDialog, GuideDialog, MoreDialog, PrivacyDialog, RestartDialog, StageIntro } from './components/GameDialogs';
 import { GameHud } from './components/GameHud';
 import { ResultDialog } from './components/ResultDialog';
 import { CollectionPage } from './pages/CollectionPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { format, modeLabel } from './utils/format';
 import { findBestHint } from './utils/hint';
-import { BOOSTERS, buyBooster, metaOf, pendingRewards, settleFinish, spendBooster, trackMove, type BoosterKind, type ChestKind, type FinishSummary, type Loot, claimLogin, claimMission, claimAchievement, openChest, describeLoot } from './utils/meta';
+import { BOOSTERS, buyBooster, metaOf, pendingRewards, settleFinish, spendBooster, trackMove, type BoosterKind, type ChestKind, type FinishSummary, type Loot, claimLogin, claimMission, claimAchievement, openChest, describeLoot, restoreStreak, syncChests } from './utils/meta';
 import { ChestDialog } from './components/ChestDialog';
 import { localDateKey } from './types/game';
 import { BoosterBar } from './components/BoosterBar';
@@ -33,11 +33,11 @@ import { findLessonPath, Lesson } from './utils/lesson';
 import { LessonCoach, LessonRoute } from './components/LessonCoach';
 import { League } from './components/League';
 import { leagueDay } from './utils/competition';
-import { canRewardContinue, applyRewardContinue, applyBooster, applyStreakBonus, canUseBooster } from './utils/session';
+import { canRewardContinue, applyRewardContinue, applyBooster, applyStreakBonus, canUseBooster, continueWithMoves, missingGoals } from './utils/session';
 import { adPrivacyRequired, prepareAdConsent, rewardedAdsAvailable, showAdPrivacy, watchContinueAd } from './utils/ads';
 
 type Page = 'journey' | 'rewards' | 'collection' | 'settings' | 'league' | 'game';
-type Overlay = 'guide' | 'more' | 'restart' | 'erase' | 'privacy' | 'story' | 'chest' | null;
+type Overlay = 'guide' | 'more' | 'restart' | 'erase' | 'privacy' | 'story' | 'chest' | 'intro' | null;
 type Presentation = { id: number; phase: 'clearing' | 'falling'; grid: CellData[][]; cleared: Set<string>; falls: GemFalls; step: { x: number; y: number } };
 /** The record a finished attempt competes against, read before the attempt is recorded. */
 const bestBefore = (profile: Profile, session: Session) => session.mode === 'classic' ? profile.stages[session.stageId]?.best ?? 0 :
@@ -117,7 +117,7 @@ export default function App() {
     let alive = true;
     void (async () => {
       let loaded = defaultProfile();
-      try { loaded = parseProfile(await readSave()); }
+      try { loaded = syncChests(parseProfile(await readSave())); }
       catch { storageReadable.current = false; if (alive) setSaveError('Kayıt okunamadı. Mevcut kaydını korumak için yeni ilerleme henüz kaydedilmiyor. Yeniden dene.'); }
       if (!loaded.sessions[loaded.lastMode]) loaded = recordSession(loaded, createSession('classic', nextUnlocked(loaded)));
       if (alive) { setProfile(loaded); setReady(true); }
@@ -183,7 +183,8 @@ export default function App() {
         if (sessionRef.current !== attempt) return;
         const next = applyRewardContinue(attempt);
         sessionRef.current = next;
-        const updated = recordSession(profileRef.current, next);
+        const updated = restoreStreak(recordSession(profileRef.current, next), reward?.lostStreak ?? 0);
+        setReward(null);
         profileRef.current = updated;
         setProfile(updated);
         void writeSave(JSON.stringify(updated)).catch(() => setSaveError('Reklam ödülü kaydedilemedi. Cihaz depolamasını kontrol et.'));
@@ -251,6 +252,20 @@ export default function App() {
     setFeedback(move.next.outcome === 'won' ? 'Harika! Tüm hedefler tamamlandı.' : special === 'nova_3x3' ? '3× rezonans çekirdeği oluştu. Yeni bir zincire ekle!' : special !== 'none' ? 'Işık kanalı oluştu. Bir sonraki zincire ekle!' : `+${format(move.earned)} puan · ${move.result.clearedCount} taş temizlendi${move.result.unlockedCount ? ` · ${move.result.unlockedCount} mühür açıldı` : ''}`);
     if (move.next.outcome === 'playing') { sound.playChainRelease(uniqueLength, wasLoop); void haptic('match', profileRef.current.settings.haptics); }
   }, [clearPath, finishLesson, advance, animate]);
+
+  /** "So close": a lost adventure attempt continues with +3 moves from the inventory or the crystal shop. */
+  function continueMoves() {
+    const current = sessionRef.current;
+    if (!current || current.outcome !== 'lost') return;
+    const wallet = profileRef.current;
+    const funded = metaOf(wallet).boosters.moves > 0 ? wallet : buyBooster(wallet, 'moves');
+    if (!funded) { setToast(`+3 Hamle için ${BOOSTERS.moves.price} kristal gerekiyor.`); return; }
+    const next = continueWithMoves(current);
+    const updated = restoreStreak(recordSession(spendBooster(funded, 'moves')!, next), reward?.lostStreak ?? 0);
+    sessionRef.current = next; profileRef.current = updated;
+    setProfile(updated); setReward(null); setAdNotice('');
+    sound.playReward(); setFeedback('+3 hamle eklendi. Hadi bitir!');
+  }
 
   /** Spends (or buys, then spends) a booster. Hammer and prism wait for a target stone. */
   const fireBooster = useCallback((kind: BoosterKind, target?: Coord) => {
@@ -326,11 +341,12 @@ export default function App() {
     clearPath(); setHint([]); setBurst(null); setFeedback('Aynı renkte 3 taşı bağla. Halkayla tüm rengi temizle.');
     const opened = sessionToOpen(profile, mode, stageId, mode === 'daily' ? new Date(`${day ?? leagueDay()}T12:00:00`) : new Date());
     const next = applyStreakBonus(opened, metaOf(profile).winStreak);
-    if (next.streakBonus && next !== opened) setToast(`Alev serisi ${metaOf(profile).winStreak}: tahtada hazır güç taşları seni bekliyor!`);
     setReward(null); setAiming(null);
     updateSession(next); setPage('game');
     setOverlay(null);
-    setLesson(!profile.tutorialSeen ? 'link' : mode === 'classic' && next.stageId === 4 && !profile.loopTutorialSeen && next.loopsMade === 0 ? 'loop' : null);
+    const teaching = !profile.tutorialSeen ? 'link' : mode === 'classic' && next.stageId === 4 && !profile.loopTutorialSeen && next.loopsMade === 0 ? 'loop' : null;
+    setLesson(teaching);
+    if (mode === 'classic' && next.turns === 0 && !teaching && next.stageId > 3) setOverlay('intro');
   }
 
   function goPage(target: Page) { timeline.finish(); clearPath(); setAiming(null); setOverlay(null); setLesson(null); setPage(target); }
@@ -397,11 +413,11 @@ export default function App() {
     {saveError && <div className="save-error" role="alert"><span>{saveError}</span><button onClick={() => { void retryStorage(); }}>Yeniden dene</button></div>}
     <main id="main" ref={mainRef} tabIndex={-1} className={`main page-${page}`}>
       {page === 'rewards' && <RewardsPage profile={profile} today={localToday}
-        onCheckIn={() => { const result = claimLogin(profile, localToday); if (!result) return; setProfile(result.profile); sound.playVictory(); setToast(result.reward.chest ? 'Haftalık hazine sandıklarına eklendi!' : `Günlük ödül: ${result.reward.label}`); }}
-        onMission={id => { setProfile(p => claimMission(p, id, localToday)); sound.playSpecialCreation(); }}
-        onOpenChest={() => { const result = openChest(profile); if (!result) return; setProfile(result.profile); setChestLoot({ kind: result.kind, loot: result.loot }); setOverlay('chest'); sound.playVictory(); void haptic('win', profile.settings.haptics); }}
-        onBuy={kind => { const bought = buyBooster(profile, kind); if (bought) { setProfile(bought); sound.playSpecialCreation(); setToast(`${BOOSTERS[kind].name} envanterine eklendi.`); } }}
-        onAchievement={id => { setProfile(p => claimAchievement(p, id)); sound.playVictory(); }}/>}
+        onCheckIn={() => { const result = claimLogin(profile, localToday); if (!result) return; setProfile(result.profile); sound.playReward(); setToast(result.reward.chest ? 'Haftalık hazine sandıklarına eklendi!' : `Günlük ödül: ${result.reward.label}`); }}
+        onMission={id => { setProfile(p => claimMission(p, id, localToday)); sound.playReward(); }}
+        onOpenChest={() => { const result = openChest(profile); if (!result) return; setProfile(result.profile); setChestLoot({ kind: result.kind, loot: result.loot }); setOverlay('chest'); sound.playChest(); void haptic('win', profile.settings.haptics); }}
+        onBuy={kind => { const bought = buyBooster(profile, kind); if (bought) { setProfile(bought); sound.playReward(); setToast(`${BOOSTERS[kind].name} envanterine eklendi.`); } }}
+        onAchievement={id => { setProfile(p => claimAchievement(p, id)); sound.playReward(); }}/>}
       {page === 'journey' && pending > 0 && <button className="reward-banner" onClick={() => goPage('rewards')}><Gift size={22}/><span><strong>{pending} ödül seni bekliyor</strong><small>Günlük giriş, görevler ve sandıklar</small></span><ArrowRight size={18}/></button>}
       {page === 'league' && <League best={profile.dailyBest} daily={profile.sessions.daily} onPlay={day => openGame('daily', undefined, day)}/> }
       {page === 'journey' && <JourneyMap profile={profile} reducedMotion={reducedMotion} dailyFound={dailyFound} onPlay={id => openGame('classic', id)} onDaily={() => openGame('daily')} onZen={() => openGame('zen', 1)} onStory={playStory}/>}
@@ -480,11 +496,12 @@ export default function App() {
     {overlay === 'guide' && <GuideDialog gemStyle={profile.gemStyle} onClose={() => setOverlay(null)}/>}
     {overlay === 'chest' && chestLoot && <ChestDialog kind={chestLoot.kind} items={describeLoot(chestLoot.loot)} reducedMotion={reducedMotion} more={metaOf(profile).chests.length}
       onClose={() => { setOverlay(null); setChestLoot(null); }}
-      onNext={() => { const result = openChest(profile); if (!result) return; setProfile(result.profile); setChestLoot({ kind: result.kind, loot: result.loot }); sound.playVictory(); }}/>}
+      onNext={() => { const result = openChest(profile); if (!result) return; setProfile(result.profile); setChestLoot({ kind: result.kind, loot: result.loot }); sound.playChest(); }}/>}
+    {overlay === 'intro' && page === 'game' && <StageIntro session={session} stage={currentStage} gemStyle={profile.gemStyle} streak={metaOf(profile).winStreak} onClose={() => setOverlay(null)}/>}
     {overlay === 'restart' && <RestartDialog streakAtRisk={session.mode === 'classic' && session.outcome === 'playing' && session.turns > 0 && metaOf(profile).winStreak > 0} session={session} onClose={() => setOverlay(null)} onConfirm={restart}/>}
     {overlay === 'erase' && <EraseDialog onClose={() => setOverlay(null)} onConfirm={() => { clearPath(); setProfile(recordSession(defaultProfile(), createSession('classic'))); setOverlay(null); setToast('Bu cihazdaki oyun ilerlemesi sıfırlandı.'); }}/>}
     {overlay === 'privacy' && <PrivacyDialog onClose={() => setOverlay(null)}/>}
-    {page === 'game' && session.outcome !== 'playing' && overlay === null && !presentation && !burst && <ResultDialog reward={reward} profile={profile} session={session} mystery={mystery} discoveryScene={discoveryScene} reducedMotion={reducedMotion}
+    {page === 'game' && session.outcome !== 'playing' && overlay === null && !presentation && !burst && <ResultDialog missing={missingGoals(session)} movesOffer={{ owned: metaOf(profile).boosters.moves, price: BOOSTERS.moves.price, shards: metaOf(profile).shards }} onContinueMoves={continueMoves} reward={reward} profile={profile} session={session} mystery={mystery} discoveryScene={discoveryScene} reducedMotion={reducedMotion}
       previousBest={previousBest} adBusy={adBusy} adNotice={adNotice} canSave={!saveError} onNavigate={goPage} onWatchAd={() => { void continueWithAd(); }}
       onNextStage={() => openGame('classic', session.stageId + 1)} onRestart={restart} onShare={() => { void share(); }}/>}
   </div>;

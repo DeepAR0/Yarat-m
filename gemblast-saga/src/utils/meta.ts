@@ -167,14 +167,14 @@ export function trackMove(profile: Profile, move: { clearedCount: number; colorC
   return withMeta(profile, { ...trackEvents(meta, events, today), stats });
 }
 
-export interface FinishSummary { shards: number; firstClear: boolean; starsGained: number; winStreak: number; chests: ChestKind[] }
+export interface FinishSummary { shards: number; firstClear: boolean; starsGained: number; winStreak: number; chests: ChestKind[]; lostStreak: number }
 /**
  * Rewards for an attempt that just ended, comparing the profile before and after the attempt was recorded.
  * Replays pay a little; improvements (new stars, first clears) pay well.
  */
 export function settleFinish(before: Profile, after: Profile, session: Session, today = localDateKey()): { profile: Profile; summary: FinishSummary } {
   let meta = metaOf(after);
-  let shards = 0, starsGained = 0, firstClear = false;
+  let shards = 0, starsGained = 0, firstClear = false, lostStreak = 0;
   const events: Partial<Record<MissionEvent, number>> = {};
   if (session.mode === 'classic') {
     if (session.outcome === 'won') {
@@ -183,7 +183,7 @@ export function settleFinish(before: Profile, after: Profile, session: Session, 
       shards = (firstClear ? 25 : 5) + starsGained * 10;
       events.win = 1; if (starsFor(session) === 3) events.threeStar = 1;
       meta = { ...meta, winStreak: meta.winStreak + 1, stats: { ...meta.stats, wins: meta.stats.wins + 1 } };
-    } else meta = { ...meta, winStreak: 0 };
+    } else { lostStreak = meta.winStreak; meta = { ...meta, winStreak: 0 }; }
   } else if (session.mode === 'daily' && session.outcome === 'won') {
     const first = !before.dailyWins.includes(session.dailyKey!);
     shards = first ? 40 : 5; events.daily = 1;
@@ -192,7 +192,7 @@ export function settleFinish(before: Profile, after: Profile, session: Session, 
   meta = grantLoot(meta, { shards, boosters: {} });
   const synced = syncChests(withMeta(after, meta));
   const chests = metaOf(synced).chests.slice(meta.chests.length);
-  return { profile: synced, summary: { shards, firstClear, starsGained, winStreak: metaOf(synced).winStreak, chests } };
+  return { profile: synced, summary: { shards, firstClear, starsGained, winStreak: metaOf(synced).winStreak, chests, lostStreak } };
 }
 
 /** Queues star and realm chests the profile has earned but not yet received. */
@@ -228,6 +228,12 @@ export function openChest(profile: Profile): { profile: Profile; kind: ChestKind
   const pulls = kind === 'star' ? 1 : kind === 'mission' ? 1 : kind === 'streak' ? 2 : 3;
   for (let i = 0; i < pulls; i++) { const b = kinds[Math.floor(rng() * (rng() < .25 ? 3 : 2))]; loot.boosters[b] = (loot.boosters[b] ?? 0) + 1; }
   return { profile: withMeta(profile, grantLoot({ ...meta, chests: meta.chests.slice(1) }, loot)), kind, loot };
+}
+
+/** Continuing a lost attempt (ad or +3 moves) gives back the win streak that the loss took away. */
+export function restoreStreak(profile: Profile, lostStreak: number): Profile {
+  const meta = metaOf(profile);
+  return lostStreak > meta.winStreak ? withMeta(profile, { ...meta, winStreak: lostStreak }) : profile;
 }
 
 // ---------- Shop and booster spending ----------

@@ -1,5 +1,6 @@
-import { ArrowRight, ChevronRight, Hand, Lightbulb, Orbit, RotateCcw, Share2, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ChevronRight, Flame, LockKeyhole, Trophy, Zap, Hand, Lightbulb, Orbit, RotateCcw, Share2, ShieldCheck } from 'lucide-react';
 import type { Profile, Session } from '../utils/session';
+import { PRISM_DEFINITIONS, type StageConfig } from '../types/game';
 import { format } from '../utils/format';
 import { Dialog } from './Dialog';
 import { PrismGemArtwork } from './PrismGemArtwork';
@@ -32,4 +33,22 @@ export function EraseDialog({ onClose, onConfirm }: { onClose: () => void; onCon
 
 export function PrivacyDialog({ onClose }: { onClose: () => void }) {
   return <Dialog title="Gizlilik ve verilerin" onClose={onClose}><div className="privacy-copy"><ShieldCheck size={34}/><p>Macera ilerlemesi, yıldızlar, rekorlar ve ayarlar cihazında tutulur. iOS uygulamasında isteğe bağlı AdMob ödüllü reklamları bulunur. Reklam sağlayıcısı reklam sunumu ve ölçümü için cihaz, ağ, etkileşim ve tanılama verilerini işleyebilir. Gizlilik seçeneklerin ilgili bölgelerde gösterilir; reddetmek oyuna erişimini engellemez.</p><p>Skorunu paylaşmayı seçersen, paylaşılacak metni ve hedef uygulamayı sen belirlersin. iOS liginde Game Center kullanılır; Apple oyuncu kimliğin ve skorların Apple hizmetine iletilir. Web skor ligine katılırsan oyuncu adın, hesap kimliğin ve doğrulanmış günlük skorların sunucuda saklanır. Sıralamada diğer oyuncular yalnızca oyuncu adını ve skorunu görür. Günlük hamle kaydın, sonucu doğrulamak için sen gönderdiğinde sunucuya iletilir; hamleler kalıcı olarak saklanmaz.</p><p>Yerel ilerlemeni Ayarlar’dan sıfırlayabilirsin. Lig ekranındaki “Sıralamadaki verilerimi sil” ile sunucudaki lig adını ve skorlarını silebilirsin. Uygulamayı kaldırmak sunucudaki lig verilerini silmez. Macera kayıtları cihazlar arasında otomatik eşitlenmez.</p><p><a href="./privacy.html" className="text-button">Tam gizlilik politikasını oku<ArrowRight size={16}/></a></p></div><button className="secondary-button full" onClick={onClose}>Kapat</button></Dialog>;
+}
+
+/** Pre-level card: what this stage asks, how many moves, and the streak bonus waiting on the board. */
+export function StageIntro({ session, stage, gemStyle, streak, onClose }: { session: Session; stage: StageConfig; gemStyle: Profile['gemStyle']; streak: number; onClose: () => void }) {
+  const loops = stage.loopsTarget ?? (stage.requireLoop ? 1 : 0);
+  return <Dialog className="stage-intro" title={`Bölüm ${stage.id} · ${stage.title}`} onClose={onClose}>
+    <div className="intro-moves"><strong>{session.movesLeft}</strong><span>hamle</span></div>
+    <ul className="intro-goals" aria-label="Hedefler">
+      <li><Trophy size={20}/><b>{format(stage.targetScore)}</b><small>puan</small></li>
+      {stage.quotas.map(q => <li key={q.color}><span className="intro-gem"><PrismGemArtwork gemStyle={gemStyle} cell={{ id: q.color, color: q.color, multiplier: 1, special: 'none', locked: false }} isSelected={false} isLoopHighlighted={false}/></span><b>{q.target}</b><small>{PRISM_DEFINITIONS[q.color].name}</small></li>)}
+      {loops > 0 && <li><Orbit size={20}/><b>{loops}</b><small>halka</small></li>}
+      {!!stage.sealsTarget && <li><LockKeyhole size={20}/><b>{stage.sealsTarget}</b><small>mühür</small></li>}
+      {!!stage.specialsTarget && <li><Zap size={20}/><b>{stage.specialsTarget}</b><small>güç</small></li>}
+    </ul>
+    {stage.armoredCoords?.length ? <p className="intro-tip">Kristal kabuklu mühürler iki darbe ister.</p> : null}
+    {session.streakBonus ? <p className="intro-streak"><Flame size={18}/>Alev serisi {streak}: tahtada {session.streakBonus} hazır güç taşı var!</p> : null}
+    <button className="primary-button full" onClick={onClose}>Başla<ArrowRight size={18}/></button>
+  </Dialog>;
 }
